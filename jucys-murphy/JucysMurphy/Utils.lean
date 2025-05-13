@@ -50,7 +50,7 @@ abbrev A (n : ℕ) := MonoidAlgebra ℂ (S n)
 
 -- VIELÄ YKS TAPA: Käytä sittenkin Finset permutaatioita: tällöin i, j olis elementtejä eikä tarvis coercioita!
 
-#check Equiv.Perm.decomposeFin
+#check Equiv.Perm.decomposeFin (swap 0 2)
 
 
 
@@ -67,22 +67,26 @@ lemma lift_mon_inj' {n m : ℕ} {h_leq : n ≤ m} : Function.Injective ↑(lift_
   Finsupp.mapDomain_injective lift_sym_inj'
 
 
+#check Fin.castAddEmb
+#check Fin.castSuccEmb
 
-def lift_sym (n m : ℕ) : S n →* S (n + m) := Equiv.Perm.viaEmbeddingHom (Fin.castAddEmb m)
 
-def lift_mon (n m : ℕ) : A n →ₐ[ℂ] A (n + m) := MonoidAlgebra.mapDomainAlgHom ℂ ℂ (lift_sym n m)
+def lift_sym {n : ℕ} : S n →* S (n + 1) := Equiv.Perm.viaEmbeddingHom (Fin.castSuccEmb)
+
+def lift_mon {n : ℕ} : A n →ₐ[ℂ] A (n + 1) := MonoidAlgebra.mapDomainAlgHom ℂ ℂ lift_sym
 
 -- Tässä kontekstissa voidaan laittaa nää koersioiksi
 --instance CoeDep (S n) (S m)...
 
+
 -- Lemmoja näistä
 -- Ehkä tähän lemmat että lift ∘ lift = lift ja lift : A n → A n = id
 
-lemma lift_sym_inj (n m : ℕ) : Function.Injective ↑(lift_sym n m) :=
-  Equiv.Perm.viaEmbeddingHom_injective (Fin.castAddEmb m)
+lemma lift_sym_inj {n : ℕ} : Function.Injective ↑(@lift_sym n) :=
+  Equiv.Perm.viaEmbeddingHom_injective (Fin.castAddEmb 1)
 
-lemma lift_mon_inj (n m : ℕ) : Function.Injective ↑(lift_mon n m) :=
-  Finsupp.mapDomain_injective (lift_sym_inj n m)
+lemma lift_mon_inj {n : ℕ} : Function.Injective ↑(@lift_mon n) :=
+  Finsupp.mapDomain_injective (@lift_sym_inj n)
 
 
 @[simp]
@@ -98,10 +102,12 @@ lemma lift_mon_comp_lift_mon {n m k : ℕ} {v : A n} : lift_mon (n + m) k (lift_
   sorry
 
 
+--
+
 
 -- Yllättävän hankala
 @[simp]
-lemma lift_swap_eq_swap {n m i j : ℕ} [NeZero n] [NeZero m] : swap (↑i) (↑j) = lift_sym n m (swap (↑i) (↑j)) := by
+lemma lift_swap_eq_swap {n i j : ℕ} [NeZero n] : swap (↑i) (↑j) = @lift_sym n (swap (↑i) (↑j)) := by
   unfold lift_sym
   rw [Perm.viaEmbeddingHom_apply] -- Rewrite what the lifting actually does
   rw [←Equiv.coe_inj]             -- Only need that the underlying functions match
