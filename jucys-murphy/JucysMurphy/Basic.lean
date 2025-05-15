@@ -67,9 +67,10 @@ lemma σ_sum_perm_eq {n : ℕ} [NeZero n] : ∀ σ : (S n), (σ (n-1) = (n-1)) �
   unfold f g at h_sum_eq
   exact h_sum_eq
 
+
 theorem jmElem_succ_comm_S_n' (n : ℕ) [NeZero n] (σ : S n) (hσ : σ (n - 1) = n - 1) :
     Commute (jmElem n n) (MonoidAlgebra.of ℂ (S n) σ) := by
-  unfold jmElem Commute SemiconjBy
+  rw [jmElem, commute_iff_eq]
 
   -- Distributivity
   rw [Finset.mul_sum]
@@ -89,6 +90,7 @@ theorem jmElem_succ_comm_S_n' (n : ℕ) [NeZero n] (σ : S n) (hσ : σ (n - 1) 
   -- Use the reordering lemma
   rw [σ_sum_perm_eq]
   exact hσ
+
 
 -- Before `Utils` compiles:
 
@@ -148,7 +150,7 @@ theorem jmElem_succ_comm_A_n (n : ℕ) [NeZero n] (a : A n) :
     rw [← MonoidAlgebra.smul_single' (a x) x 1]
     rw [map_smul]
 
-  unfold Commute SemiconjBy
+  rw [commute_iff_eq]
 
   -- Move multiplication by jmElem inside the sums
   rw [Finset.mul_sum, Finset.sum_mul]
