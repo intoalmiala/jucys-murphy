@@ -22,7 +22,8 @@ example (a b : Fin n) : swap a b = swap b a := by
 
 #check MonoidAlgebra ℂ (S n)
 
-noncomputable def jmElem (n : ℕ) [NeZero n]: MonoidAlgebra ℂ (S n) := ∑ i : Fin n with ↑i ∈ Finset.range (n-1), MonoidAlgebra.of ℂ (S n) (swap i (n-1))
+noncomputable def jmElem (n : ℕ) [NeZero n] : MonoidAlgebra ℂ (S n) :=
+  ∑ i : Fin n with ↑i ∈ Finset.range (n-1), MonoidAlgebra.of ℂ (S n) (swap i (n-1))
 
 noncomputable def jmElem' (k n : ℕ) [NeZero n] : A n := ∑ i ∈ Finset.Ico 0 (n - 1), MonoidAlgebra.of ℂ (S n) (swap i (k-1))
 -- Tarvitaa viel k restricted 2,3,...,n
@@ -154,7 +155,8 @@ lemma lift_mon_inj {n : ℕ} : Function.Injective ↑(@lift_mon n) :=
 
 -- TÄÄ MYÖS UTILS
 @[simp]
-lemma lift_mon_lift_sym_comm_MonAlg_of {n : ℕ} (σ : S n) : lift_mon (MonoidAlgebra.of ℂ (S n) σ) = MonoidAlgebra.of ℂ (S (n + 1)) (lift_sym σ) := by
+lemma lift_mon_lift_sym_comm_MonAlg_of {n : ℕ} (σ : S n) :
+    lift_mon (MonoidAlgebra.of ℂ (S n) σ) = MonoidAlgebra.of ℂ (S (n + 1)) (lift_sym σ) := by
   unfold lift_mon
   simp
 
@@ -179,12 +181,34 @@ theorem jmElem_succ_comm_S_n (n : ℕ) [NeZero n] (σ : S n) :
   rw [lift_mon_lift_sym_comm_MonAlg_of]
   exact jmElem_succ_comm_S_n' (n + 1) (lift_sym σ) h_lift_σ
 
-
 theorem jmElem_succ_comm_A_n (n : ℕ) [NeZero n] (a : A n) :
     Commute (jmElem (n + 1)) (lift_mon a) := by
-  --apply MonoidAlgebra.of_commute
+  rw [← a.sum_single]
+  unfold Finsupp.sum
+  rw [map_sum lift_mon]
+  have comm_perm := jmElem_succ_comm_S_n n
+  simp at comm_perm
+  conv =>
+    rhs
+    rhs
+    intro x
+    rw [← mul_one (a x)]
+    rw [← MonoidAlgebra.smul_single' (a x) x 1]
+    rw [map_smul]
+  unfold Commute SemiconjBy
+  rw [Finset.mul_sum, Finset.sum_mul]
+  conv =>
+    lhs
+    rhs
+    intro i
+    rw [mul_smul_comm]
+    rw [comm_perm]
+  conv =>
+    rhs
+    rhs
+    intro i
+    rw [smul_mul_assoc]
 
-  sorry
 
   -- variable (lift_sym σ : Perm (Fin (n + 1))) (Fin.castSuccEmb : Fin (n + 1) ↪ Fin (n + 1))
   -- theorem viaEmbedding_apply_of_not_mem
