@@ -18,28 +18,26 @@ def lift_perm {n : ℕ} : S n →* S (n + 1) := Equiv.Perm.viaEmbeddingHom (Fin.
 
 def lift_monAlg {n : ℕ} : A n →ₐ[ℂ] A (n + 1) := MonoidAlgebra.mapDomainAlgHom ℂ ℂ lift_perm
 
--- Tarvitaanko näitä kahta? -Into
--- Ehkä joo jos halutaan siirtää permutaatioita S (n + 1) → S n.
+
 lemma lift_perm_inj {n : ℕ} : Function.Injective ↑(@lift_perm n) :=
-  Equiv.Perm.viaEmbeddingHom_injective (Fin.castSuccEmb)
+  Perm.viaEmbeddingHom_injective (Fin.castSuccEmb)
 
 lemma lift_monAlg_inj {n : ℕ} : Function.Injective ↑(@lift_monAlg n) :=
   Finsupp.mapDomain_injective (@lift_perm_inj n)
 
 
--- En iha oo varma onko tää järkevin tapa
-def kth_lift_perm {n k : ℕ} : S n →* S (n + k) :=
-  match k with
-  | 0 => MonoidHom.id (S n)
-  | 1 => lift_perm
-  | k + 1 => lift_perm ∘ kth_lift_perm
+def kth_lift_perm (n k : ℕ) [NeZero n] : S n →* S (n + k) :=
+  Equiv.Perm.viaEmbeddingHom (Fin.castAddEmb k)
 
-def kth_lift_monAlg {n k : ℕ} [NeZero k]: A n →ₐ[ℂ] A (n + k) :=
-  match k with
-  | 0 => AlgHom.id ℂ (A n)
-  | 1 => lift_monAlg
-  | k + 1 => lift_monAlg ∘ kth_lift_monAlg
+def kth_lift_monAlg (n k : ℕ) [NeZero n]: A n →ₐ[ℂ] A (n + k) :=
+  MonoidAlgebra.mapDomainAlgHom ℂ ℂ (kth_lift_perm n k)
 
+
+lemma kth_lift_perm_inj (n k : ℕ) [NeZero n] : Function.Injective ↑(kth_lift_perm n k) :=
+  Perm.viaEmbeddingHom_injective (Fin.castAddEmb k)
+
+lemma kth_lift_monAlg_inj (n k : ℕ) [NeZero n] : Function.Injective ↑(kth_lift_monAlg n k) :=
+  Finsupp.mapDomain_injective (kth_lift_perm_inj n k)
 
 
 
@@ -232,12 +230,11 @@ theorem jmElem_comm (n k l : ℕ) [NeZero n] :
     · exact h k l h_lt
     · simp at h_lt
       have h_lt : l < k := lt_of_le_of_ne' h_lt h_eq
-      apply Commute.symm
-      exact h l k h_lt
+      exact (h l k h_lt).symm
 
   intro k l h_lt
 
-
+  sorry
 
   -- BRUH
   -- About X_nsucc_comm_with_C_S_n input jmElem' m k
