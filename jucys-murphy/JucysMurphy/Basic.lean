@@ -110,7 +110,7 @@ lemma lift_monAlg_inj {n : ℕ} : Function.Injective ↑(@lift_monAlg n) :=
 
 -- TÄÄ MYÖS UTILS
 @[simp]
-lemma lift_mon_lift_sym_comm_MonAlg_of {n : ℕ} (σ : S n) :
+lemma lift_monAlg_of_eq_of_lift_perm {n : ℕ} (σ : S n) :
     lift_monAlg (MonoidAlgebra.of ℂ (S n) σ) = MonoidAlgebra.of ℂ (S (n + 1)) (lift_perm σ) := by
   unfold lift_monAlg
   simp
@@ -129,7 +129,7 @@ theorem jmElem_succ_comm_S_n (n : ℕ) [NeZero n] (σ : S n) :
     rw [Perm.viaEmbeddingHom_apply]
     exact Perm.viaEmbedding_apply_of_not_mem σ Fin.castSuccEmb (-1) h_range
 
-  rw [lift_mon_lift_sym_comm_MonAlg_of]
+  rw [lift_monAlg_of_eq_of_lift_perm]
   exact jmElem_succ_comm_S_n' (n + 1) (lift_perm σ) h_lift_σ
 
 
@@ -166,11 +166,20 @@ theorem jmElem_succ_comm_A_n (n : ℕ) [NeZero n] (a : A n) :
 
 theorem jmElem_comm (n k l : ℕ) [NeZero n] :
     Commute (jmElem k n) (jmElem l n) := by
-  by_cases h_leq : k ≤ l
-  · by_cases h_eq : k = l
-    · rw [h_eq]
-    · have h_le : k < l := lt_of_le_of_ne h_leq h_eq
-      sorry
-  · sorry
+  by_cases h_eq : k = l
+  · rw [h_eq]
+
+  suffices h : (x y : ℕ) → x < y → Commute (jmElem x n) (jmElem y n) by
+    by_cases h_lt : k < l
+    · exact h k l h_lt
+    · simp at h_lt
+      have h_lt : l < k := lt_of_le_of_ne' h_lt h_eq
+      apply Commute.symm
+      exact h l k h_lt
+
+  intro k l h_lt
+
+
+
   -- BRUH
   -- About X_nsucc_comm_with_C_S_n input jmElem' m k
