@@ -36,11 +36,45 @@ def le_lift_perm {k n : ℕ} (h_le : k ≤ n) : S k →* S n :=
 def le_lift_monAlg {k n : ℕ} (h_le : k ≤ n) : A k →ₐ[ℂ] A n :=
   MonoidAlgebra.mapDomainAlgHom ℂ ℂ (le_lift_perm h_le)
 
+theorem le_lift_monAlg_def {k n : ℕ} (h_le : k ≤ n) : le_lift_monAlg h_le =
+    MonoidAlgebra.mapDomainAlgHom ℂ ℂ (Perm.viaEmbeddingHom (Fin.castLEEmb h_le)) :=
+  rfl
+
+
 def lt_lift_perm {k n : ℕ} (h_lt : k < n) : S k →* S n :=
   le_lift_perm (le_of_lt h_lt)
 
 def lt_lift_monAlg {k n : ℕ} (h_lt : k < n) : A k →ₐ[ℂ] A n :=
   le_lift_monAlg (le_of_lt h_lt)
+
+
+theorem lt_lift_perm_def {k n : ℕ} (h_lt : k < n) :
+    lt_lift_perm h_lt = Equiv.Perm.viaEmbeddingHom (Fin.castLEEmb $ le_of_lt h_lt) :=
+  rfl
+
+theorem lt_lift_monAlg_def {k n : ℕ} (h_lt : k < n) : lt_lift_monAlg h_lt =
+    MonoidAlgebra.mapDomainAlgHom ℂ ℂ (Perm.viaEmbeddingHom (Fin.castLEEmb $ le_of_lt h_lt)) :=
+  rfl
+
+#check AlgHom.comp_apply
+#check MonoidHom.
+
+theorem viaEmbeddingHom_comp {α β γ : Type*} (ι : α ↪ β) (κ : β ↪ γ) :
+    (Perm.viaEmbeddingHom κ).comp (Perm.viaEmbeddingHom ι) = Perm.viaEmbeddingHom (ι.trans κ) := by
+  sorry
+
+theorem le_lift_monAlg_trans {k l n : ℕ} (hkl : k ≤ l) (hln : l ≤ n) {a : A k} :
+    le_lift_monAlg hln (le_lift_monAlg hkl a) = le_lift_monAlg (le_trans hkl hln) a := by
+  rw [le_lift_monAlg_def, le_lift_monAlg_def]
+  have : (MonoidAlgebra.mapDomainAlgHom ℂ ℂ (Perm.viaEmbeddingHom (Fin.castLEEmb hln)))
+      ((MonoidAlgebra.mapDomainAlgHom ℂ ℂ (Perm.viaEmbeddingHom (Fin.castLEEmb hkl))) a) =
+        MonoidAlgebra.mapDomainAlgHom ℂ ℂ (Perm.viaEmbeddingHom (Fin.castLEEmb $ le_trans hkl hln)) a := by
+    rw [← AlgHom.comp_apply]
+    rw [← MonoidAlgebra.mapDomainAlgHom_comp ℂ ℂ]
+    rw [viaEmbeddingHom_comp (Fin.castLEEmb hkl) (Fin.castLEEmb hln)]
+    simp
+    sorry
+  exact this
 
 
 lemma le_lift_perm_inj {n k : ℕ} (h_le : k ≤ n) : Function.Injective ↑(le_lift_perm h_le) :=
@@ -137,7 +171,7 @@ lemma σ_sum_perm_eq' {n m : ℕ} (h_lt : n < m) [NeZero m] (σ : S n) :
   have h_lt_iff : ∀ i : Fin m, i ∈ {i | ↑i ∈ Finset.range n} ↔
       lt_lift_perm h_lt σ i ∈ {i : Fin m | ↑i ∈ Finset.range n} := by
     intro i
-    unfold lt_lift_perm le_lift_perm
+    rw [lt_lift_perm_def]
     simp
     rw [Perm.viaEmbeddingHom_apply]
     constructor
@@ -164,7 +198,7 @@ lemma σ_sum_perm_eq' {n m : ℕ} (h_lt : n < m) [NeZero m] (σ : S n) :
 
 
 
-theorem jmElem_succ_comm_perm' (n m : ℕ) (h_lt : n < m) [NeZero m] (σ : S m) (hσ : ∀ k ∈ Finset.Ico n m, σ k = k) :
+theorem jmElem_succ_comm_perm' {n m : ℕ} (h_lt : n < m) [NeZero m] (σ : S m) (hσ : ∀ k ∈ Finset.Ico n m, σ k = k) :
     Commute (jmElem m m) (A_of m σ) := by
   rw [jmElem, commute_iff_eq]
 
@@ -200,12 +234,12 @@ theorem jmElem_succ_comm_perm' (n m : ℕ) (h_lt : n < m) [NeZero m] (σ : S m) 
 @[simp]
 lemma lift_monAlg_of_eq_of_lift_perm {n m : ℕ} (h_lt : n < m) (σ : S n) :
     lt_lift_monAlg h_lt (A_of n σ) = A_of m (lt_lift_perm h_lt σ) := by
-  unfold lt_lift_monAlg lt_lift_perm le_lift_monAlg le_lift_perm
+  rw [lt_lift_monAlg_def, lt_lift_perm_def]
   simp
 
 #check Finset.range
 
-theorem jmElem_succ_comm_perm (n m : ℕ) [NeZero n] [NeZero m] (σ : S n) (h_lt : n < m) :
+theorem jmElem_succ_comm_perm {n m : ℕ} [NeZero n] [NeZero m] (σ : S n) (h_lt : n < m) :
     Commute (jmElem m m) (lt_lift_monAlg h_lt (A_of n σ)) := by
 
   have h_range : ∀ k ∈ Finset.Ico n m, (↑k : Fin m) ∉ Set.range (Fin.castLEEmb (le_of_lt h_lt)) := by
@@ -222,13 +256,13 @@ theorem jmElem_succ_comm_perm (n m : ℕ) [NeZero n] [NeZero m] (σ : S n) (h_lt
     exact Perm.viaEmbedding_apply_of_not_mem σ (Fin.castLEEmb $ le_of_lt h_lt) ↑k (h_range k hk)
 
   rw [lift_monAlg_of_eq_of_lift_perm]
-  exact jmElem_succ_comm_perm' n m h_lt (lt_lift_perm h_lt σ) h_lift_σ
+  exact jmElem_succ_comm_perm' h_lt (lt_lift_perm h_lt σ) h_lift_σ
 
 
 
 -- theorem jmElem_succ_comm_monAlg (n : ℕ) [NeZero n] (a : A n) :
 --    Commute (jmElem (n + 1) (n + 1)) (lift_monAlg a) := by
-theorem jmElem_succ_comm_monAlg (n m : ℕ) [NeZero m] [NeZero n] (a : A n) (h_lt : n < m) :
+theorem jmElem_succ_comm_monAlg {n m : ℕ} [NeZero m] [NeZero n] (a : A n) (h_lt : n < m) :
     Commute (jmElem m m) (lt_lift_monAlg h_lt a) := by
   -- Decompose into sum of singles
   rw [← a.sum_single]
@@ -253,7 +287,7 @@ theorem jmElem_succ_comm_monAlg (n m : ℕ) [NeZero m] [NeZero n] (a : A n) (h_l
   conv in fun i ↦ _ =>
     intro i
     rw [mul_smul_comm]
-    tactic => have comm_perm := jmElem_succ_comm_perm n m i h_lt
+    tactic => have comm_perm := jmElem_succ_comm_perm i h_lt
     tactic => simp at comm_perm
     rw [comm_perm]
     rw [← smul_mul_assoc]
@@ -263,39 +297,40 @@ theorem jmElem_succ_comm_monAlg (n m : ℕ) [NeZero m] [NeZero n] (a : A n) (h_l
 
 --set_option diagnostics true
 
-theorem jmElem_comm (n k l : ℕ) [NeZero n] :
+lemma jmElem_comm' {n k l : ℕ} [NeZero n] [NeZero k] [NeZero l] (h_le : l ≤ n) (h_lt : k < l) :
     Commute (jmElem k n) (jmElem l n) := by
-  by_cases h_eq : k = l
-  · rw [h_eq]
 
-  suffices h : (x y : ℕ) → x < y → Commute (jmElem x n) (jmElem y n) by
-    by_cases h_lt : k < l
-    · exact h k l h_lt
-    · simp at h_lt
-      have h_lt : l < k := lt_of_le_of_ne' h_lt h_eq
-      exact (h l k h_lt).symm
+  have l_pred_le_n : l - 1 ≤ n := le_trans (by simp) h_le
 
-  intro k l h_lt
-
-  have h_k_le_n : l - 1 ≤ n := sorry
-  have h_nz : NeZero (l - 1) := sorry
-  have h_l_nz : NeZero l := NeZero.of_gt h_lt
-
-  have : jmElem k n ∈ Set.range (le_lift_monAlg h_k_le_n) := by
+  have l_pred_nz : NeZero (l - 1) := by
+    apply NeZero.of_pos
     simp
-    use jmElem k (l - 1)
-    sorry
+    have k_nz : k > 0 := Nat.pos_of_neZero k
+    exact Nat.lt_of_le_of_lt k_nz h_lt
 
   have h_lt : l - 1 < l := Nat.sub_one_lt_of_lt h_lt
 
   suffices h : Commute (lt_lift_monAlg h_lt $ jmElem k (l - 1)) (jmElem l l) by
+
     sorry
 
-  have h_l : l - 1 + 1 = l := by sorry
-  have := jmElem_succ_comm_monAlg (l - 1) l (jmElem k (l - 1))
-  simp at this
+  exact (jmElem_succ_comm_monAlg (jmElem k (l - 1)) h_lt).symm
 
-  exact Commute.symm (jmElem_succ_comm_monAlg (l - 1) l (jmElem k (l - 1)) h_lt)
+
+theorem jmElem_comm {n k l : ℕ} [NeZero n] [NeZero k] [NeZero l] (h_le : l ≤ n ∧ k ≤ n):
+    Commute (jmElem k n) (jmElem l n) := by
+  by_cases h_eq : k = l
+  · rw [h_eq]
+
+  suffices h : k < l → Commute (jmElem k n) (jmElem l n) by
+    by_cases h_lt : k < l
+    · exact h h_lt
+    · simp at h_lt
+      have h_lt : l < k := lt_of_le_of_ne' h_lt h_eq
+      exact (jmElem_comm' h_le.right h_lt).symm
+
+  intro h_lt
+  exact jmElem_comm' h_le.left h_lt
 
   -- BRUH
   -- About X_nsucc_comm_with_C_S_n input jmElem' m k
