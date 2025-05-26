@@ -59,7 +59,7 @@ theorem lt_lift_monAlg_def {k n : ℕ} (h_lt : k < n) : lt_lift_monAlg h_lt =
 #check AlgHom.comp_apply
 #check MonoidHom.
 
-theorem viaEmbeddingHom_comp {α β γ : Type*} (ι : α ↪ β) (κ : β ↪ γ) :
+theorem viaEmbeddingHom_trans {α β γ : Type*} (ι : α ↪ β) (κ : β ↪ γ) :
     (Perm.viaEmbeddingHom κ).comp (Perm.viaEmbeddingHom ι) = Perm.viaEmbeddingHom (ι.trans κ) := by
   sorry
 
@@ -71,7 +71,7 @@ theorem le_lift_monAlg_trans {k l n : ℕ} (hkl : k ≤ l) (hln : l ≤ n) {a : 
         MonoidAlgebra.mapDomainAlgHom ℂ ℂ (Perm.viaEmbeddingHom (Fin.castLEEmb $ le_trans hkl hln)) a := by
     rw [← AlgHom.comp_apply]
     rw [← MonoidAlgebra.mapDomainAlgHom_comp ℂ ℂ]
-    rw [viaEmbeddingHom_comp (Fin.castLEEmb hkl) (Fin.castLEEmb hln)]
+    rw [viaEmbeddingHom_trans (Fin.castLEEmb hkl) (Fin.castLEEmb hln)]
     simp
     sorry
   exact this
@@ -212,7 +212,6 @@ theorem jmElem_succ_comm_perm' {n m : ℕ} (h_lt : n < m) [NeZero m] (σ : S m) 
     · exact Nat.pos_of_neZero m
 
   -- Coercion to MonoidAlgebra multiplicative
-  -- En tiiä miten rw summan sisällä mutta tää ainaki toimii
   conv =>
     enter [2, 2, i]
     rw [(MonoidHom.map_mul (A_of m) σ (swap i ↑(m - 1))).symm]
@@ -237,7 +236,107 @@ lemma lift_monAlg_of_eq_of_lift_perm {n m : ℕ} (h_lt : n < m) (σ : S n) :
   rw [lt_lift_monAlg_def, lt_lift_perm_def]
   simp
 
-#check Finset.range
+#check MonoidHom.inl_apply
+#check MonoidHom.map_finprod
+#check MonoidAlgebra.mapDomainAlgHom
+#check MonoidAlgebra.mapDomainAlgHom_apply
+#check Perm.viaEmbedding_apply
+#check MonoidAlgebra.single_apply
+#check MonoidHom.eval
+#check Finset.sum_equiv
+#check Finset.sum_bij
+#check Finset.sum_nbij'
+#check Finset.sum_comp
+#check AddCommMonoid.mk
+#check Finset.card_le_card_of_surjOn
+
+-- Finset.sum_comp {α : Type u_3} {β : Type u_4} {γ : Type u_5} {s : Finset α}
+--  (f : γ → β) (g : α → γ) : ∑ a ∈ s, f (g a) = ∑ b ∈ Finset.image g s, {a ∈ s | g a = b}.card • f b
+
+lemma le_lift_perm_swap {n m k : ℕ} (x : Fin n) [NeZero n] [NeZero m] (h_le : n ≤ m) :
+    (le_lift_perm h_le) (swap x ↑k) = swap (x : Fin m) ↑k := by
+  unfold le_lift_perm
+  ext x
+  rw [Perm.viaEmbeddingHom_apply]
+  unfold Fin.castLEEmb Fin.castLE
+
+  rw [Perm.viaEmbedding]
+  sorry
+
+#check Finset.univ.card
+#check Fin.natCast_lt_natCast
+
+lemma le_lift_monAlg_jmElem_eq {n m k : ℕ} [NeZero n] [NeZero m] [NeZero k] (n_le_m : n ≤ m) (k_le_n : k ≤ n) :
+    le_lift_monAlg n_le_m (jmElem k n) = jmElem k m := by
+  unfold jmElem
+  unfold le_lift_monAlg
+  simp [le_lift_perm_swap]
+  unfold MonoidAlgebra.single
+  let g : Fin n → Fin m := fun x ↦ x
+  let f : Fin m → A m := fun (a : Fin m) ↦ fun₀ | swap a ↑(k - 1) => 1
+  rw [Finset.sum_comp f g]
+
+  have g_image : Finset.image g {i : Fin n | ↑i < k - 1} = {i : Fin m | ↑i < k - 1}.toFinset := by
+    simp
+    unfold g
+    ext x
+    simp
+    constructor <;> intro h
+    · obtain ⟨a, h1, h2⟩ := h
+      simp [← h2]
+      have a_lt_m : ↑a < m := Fin.val_lt_of_le a n_le_m
+      rw [Nat.mod_eq_of_lt a_lt_m]
+      assumption
+    · use x
+      simp
+      have : k - 1 < n := Nat.sub_one_lt_of_le (Nat.pos_of_neZero k) k_le_n
+      have x_lt_n : ↑x < n := lt_trans h this
+      simp [Nat.mod_eq_of_lt x_lt_n]
+      assumption
+
+  simp [g_image]
+
+  have (x : Fin m) : {a ∈ {i | ↑i < k - 1} | g a = x}.toFinset.card = 1 := by
+    unfold g
+    simp
+    have : x < k - 1 → x < n := by
+      intro h
+      trans ↑k - 1
+      · assumption
+      · refine @lt_of_lt_of_le (Fin m) _ (↑k - 1) ↑k ↑n ?_ ?_
+        have : (k : Fin m) - 1 = ↑(k - 1) := by sorry
+        · rw [this]
+          sorry
+        · sorry
+        rw [this]
+        rw [Fin.natCast_lt_natCast]
+        refine lt_of_lt_of_le (@Nat.sub_one_lt ↑k (NeZero.ne k)) ?_
+    sorry
+
+  have (x : Fin m) : ↑{a ∈ {i | ↑i < k - 1} | g a = x}.toFinset.card * f x = fun₀ | swap x ↑(k - 1) => 1 := by
+    unfold f g
+    simp
+
+    sorry
+
+  conv =>
+    enter [1, 2, x, 1, 1]
+
+  sorry
+
+
+  rw [le_lift_monAlg_def]
+  simp
+  conv =>
+    enter [1, 2, x]
+    rw [Perm.viaEmbeddingHom_apply]
+  unfold MonoidAlgebra.single
+  sorry
+
+lemma lt_lift_monAlg_jmElem_eq {n m k : ℕ} [NeZero n] [NeZero m] (h_lt : n < m) :
+    lt_lift_monAlg h_lt (jmElem k n) = jmElem k m :=
+  le_lift_monAlg_jmElem_eq (le_of_lt h_lt)
+
 
 theorem jmElem_succ_comm_perm {n m : ℕ} [NeZero n] [NeZero m] (σ : S n) (h_lt : n < m) :
     Commute (jmElem m m) (lt_lift_monAlg h_lt (A_of n σ)) := by
@@ -297,6 +396,14 @@ theorem jmElem_succ_comm_monAlg {n m : ℕ} [NeZero m] [NeZero n] (a : A n) (h_l
 
 --set_option diagnostics true
 
+
+lemma lift_jmElem_comm {n m k l : ℕ} [NeZero n] [NeZero m] (h_lt : n ≤ m) (h_comm : Commute (jmElem k n) (jmElem l n)) :
+    Commute (jmElem k m) (jmElem l m) := by
+  repeat rw [← le_lift_monAlg_jmElem_eq h_lt]
+  rw [commute_iff_eq] at *
+  repeat rw [← map_mul $ le_lift_monAlg h_lt]
+  rw [h_comm]
+
 lemma jmElem_comm' {n k l : ℕ} [NeZero n] [NeZero k] [NeZero l] (h_le : l ≤ n) (h_lt : k < l) :
     Commute (jmElem k n) (jmElem l n) := by
 
@@ -311,8 +418,8 @@ lemma jmElem_comm' {n k l : ℕ} [NeZero n] [NeZero k] [NeZero l] (h_le : l ≤ 
   have h_lt : l - 1 < l := Nat.sub_one_lt_of_lt h_lt
 
   suffices h : Commute (lt_lift_monAlg h_lt $ jmElem k (l - 1)) (jmElem l l) by
-
-    sorry
+    rw [lt_lift_monAlg_jmElem_eq h_lt] at h
+    exact lift_jmElem_comm h_le h
 
   exact (jmElem_succ_comm_monAlg (jmElem k (l - 1)) h_lt).symm
 
