@@ -105,12 +105,13 @@ lemma σ_swap_eq_swap_σ {n : ℕ} [NeZero n] (σ : S n) (i : Fin n) (hσ : σ �
 
   rw [Perm.mul_def, Perm.mul_def]
 
-  rw [← Equiv.symm_trans_swap_trans i ↑(n - 1) σ] -- Päälemma
-  rw [Equiv.trans_assoc, ← Equiv.trans_assoc σ σ.symm (Equiv.trans (swap i ↑(n - 1)) σ)] -- cancellaa sigmat
+  rw [← Equiv.symm_trans_swap_trans i ↑(n - 1) σ] -- Main lemma
+  rw [Equiv.trans_assoc, ← Equiv.trans_assoc σ σ.symm (Equiv.trans (swap i ↑(n - 1)) σ)] -- Cancel σ's
   simp
 
 
-
+-- Ei varmaankaan toimi koska σ n = n ei oo riittävä hypoteesi: tarvitaa σ k = k kaikille k ≥ n
+-- EI KORJATA JOO TÄTÄ: alempi versio saadaan varmasti helpommin
 lemma σ_sum_perm_eq {n m : ℕ} (h_lt : n < m) [NeZero m] : ∀ σ : (S m), (σ n = n) →
     ∑ i : Fin m with ↑i ∈ Finset.range n, A_of m (swap (σ i) n)
       = ∑ i : Fin m with ↑i ∈ Finset.range n, A_of m (swap i n) := by
@@ -161,36 +162,53 @@ lemma σ_sum_perm_eq {n m : ℕ} (h_lt : n < m) [NeZero m] : ∀ σ : (S m), (σ
   unfold f g at h_sum_eq
   exact h_sum_eq
 
-#check Nat.eq_of_le_of_lt_succ
-
--- TODO: joko todista tää tai korjaa vanha versio
+-- TODO: joko todista tää
 lemma σ_sum_perm_eq' {n m : ℕ} (h_lt : n < m) [NeZero m] (σ : S n) :
-    ∑ i : Fin m with ↑i ∈ Finset.range n, A_of m (swap (lift_perm σ i) n)
+    ∑ i : Fin m with ↑i ∈ Finset.range n, A_of m (swap (lt_lift_perm h_lt σ i) n)
       = ∑ i : Fin m with ↑i ∈ Finset.range n, A_of m (swap i n) := by
 
-  have h_lt_iff : ∀ i : Fin m, i ∈ {i | ↑i ∈ Finset.range n} ↔
-      lt_lift_perm h_lt σ i ∈ {i : Fin m | ↑i ∈ Finset.range n} := by
-    intro i
-    rw [lt_lift_perm_def]
-    simp
-    rw [Perm.viaEmbeddingHom_apply]
-    constructor
-    · intro h_le
-      sorry
-    · by_contra h_eq
-      simp at h_eq
-      obtain ⟨h_leq, h_nleq⟩ := h_eq
-      have := i.isLt
-      -- have h_eq : n = ↑i := (Nat.eq_of_le_of_lt_succ h_nleq i.isLt).symm
-      -- rw [←h_eq] at h_leq
+  -- Lifted σ
+  let σ' := lt_lift_perm h_lt σ
+
+  -- Suffices to show that σ' maps the sets we sum over to each other
+  suffices h_lt_iff : ∀ i : Fin m, i ∈ {i | ↑i ∈ Finset.range n} ↔
+      lt_lift_perm h_lt σ i ∈ {i : Fin m | ↑i ∈ Finset.range n}
+  · apply Finset.sum_equiv σ'
+    · unfold σ' -- Basically holds by definition
+      simp at h_lt_iff ⊢
+      exact h_lt_iff
+    · unfold σ' -- Also basically by definition
+      intro i hi
+      rfl
+
+  /- This should now be doable using:
+      1. Perm.extend_domain_apply_subtype, ...
+      2. Equiv.Perm??+
+
+  -/
+
+  intro i
+  rw [lt_lift_perm_def]
+  simp
+  rw [Perm.viaEmbeddingHom_apply]
+  constructor
+  · intro h_le
+    sorry
+  · by_contra h_eq
+    simp at h_eq
+    obtain ⟨h_leq, h_nleq⟩ := h_eq
+    have := i.isLt
+    -- have h_eq : n = ↑i := (Nat.eq_of_le_of_lt_succ h_nleq i.isLt).symm
+    -- rw [←h_eq] at h_leq
 
 
-      #check Perm.viaEmbedding_apply_of_not_mem σ Fin.castSuccEmb
-      sorry
+    #check Perm.viaEmbedding_apply_of_not_mem σ Fin.castSuccEmb
+    sorry
 
-    --rw [Perm.viaEmbedding_apply_of_not_mem σ Fin.castSuccEmb i (by simp)]
-    --constructor
-    --· intro h_le
+  --rw [Perm.viaEmbedding_apply_of_not_mem σ Fin.castSuccEmb i (by simp)]
+  --constructor
+  --· intro h_le
+
 
 
   sorry
@@ -333,9 +351,13 @@ lemma le_lift_monAlg_jmElem_eq {n m k : ℕ} [NeZero n] [NeZero m] [NeZero k] (n
   unfold MonoidAlgebra.single
   sorry
 
+
+
 lemma lt_lift_monAlg_jmElem_eq {n m k : ℕ} [NeZero n] [NeZero m] (h_lt : n < m) :
     lt_lift_monAlg h_lt (jmElem k n) = jmElem k m :=
   le_lift_monAlg_jmElem_eq (le_of_lt h_lt)
+
+
 
 
 theorem jmElem_succ_comm_perm {n m : ℕ} [NeZero n] [NeZero m] (σ : S n) (h_lt : n < m) :
@@ -397,7 +419,7 @@ theorem jmElem_succ_comm_monAlg {n m : ℕ} [NeZero m] [NeZero n] (a : A n) (h_l
 --set_option diagnostics true
 
 
-lemma lift_jmElem_comm {n m k l : ℕ} [NeZero n] [NeZero m] (h_lt : n ≤ m) (h_comm : Commute (jmElem k n) (jmElem l n)) :
+lemma lift_jmElem_comm {n m k l : ℕ} [NeZero n] [NeZero m] [NeZero k] [NeZero l] (h_lt : n ≤ m) (h_comm : Commute (jmElem k n) (jmElem l n)) :
     Commute (jmElem k m) (jmElem l m) := by
   repeat rw [← le_lift_monAlg_jmElem_eq h_lt]
   rw [commute_iff_eq] at *
@@ -452,6 +474,23 @@ def jmElem_subAlg (n : ℕ) [NeZero n] : Subalgebra ℂ (A n) := Algebra.adjoin 
 #check CommRing
 
 -- There is no instance for a commutative algebra, but algebras are implemented
--- as `Semiring`s with some properties so `CommSemiRing` instance suffices.
-instance jmeElem_adjoin_comm (n : ℕ) [NeZero n] : CommRing (jmElem_subAlg n) := by
-  sorry
+-- as `Semiring`s with some properties so `CommSemiring` instance suffices.
+instance jmeElem_adjoin_comm (n : ℕ) [NeZero n] : CommSemiring (jmElem_subAlg n) := by
+  -- MAIN LEMMA: Underlying semiring of a subalgebra commutative if generators commute
+  apply Algebra.adjoinCommSemiringOfComm
+
+  intro a ha b hb
+  unfold jmElem_set at ha hb
+  simp at ha hb
+  obtain ⟨k, hk_ge_and_le, ha_eq⟩ := ha
+  obtain ⟨hk_ge, hk_le⟩ := hk_ge_and_le -- Saako nää samaan?
+
+  obtain ⟨l, hl_ge_and_le, hb_eq⟩ := hb
+  obtain ⟨hl_ge, hl_le⟩ := hl_ge_and_le
+
+  rw [ha_eq, hb_eq]
+
+  have : NeZero k := ⟨by linarith⟩
+  have : NeZero l := ⟨by linarith⟩
+
+  exact jmElem_comm (by constructor; exact hl_le; exact hk_le)
