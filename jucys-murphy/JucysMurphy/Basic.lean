@@ -7,7 +7,7 @@ open Equiv
 
 abbrev S (n : ℕ) := Perm (Fin n)
 abbrev A (n : ℕ) := MonoidAlgebra ℂ (S n)
-noncomputable abbrev A_of (n : ℕ) := MonoidAlgebra.of ℂ (S n)
+noncomputable abbrev A_of {n : ℕ} := MonoidAlgebra.of ℂ (S n)
 
 
 
@@ -30,15 +30,26 @@ lemma kth_lift_monAlg_inj (n k : ℕ) : Function.Injective ↑(kth_lift_monAlg n
   Finsupp.mapDomain_injective (kth_lift_perm_inj n k)
 
 
+
+
+
 def le_lift_perm {k n : ℕ} (h_le : k ≤ n) : S k →* S n :=
   Equiv.Perm.viaEmbeddingHom (Fin.castLEEmb h_le)
 
 def le_lift_monAlg {k n : ℕ} (h_le : k ≤ n) : A k →ₐ[ℂ] A n :=
   MonoidAlgebra.mapDomainAlgHom ℂ ℂ (le_lift_perm h_le)
 
+
 theorem le_lift_monAlg_def {k n : ℕ} (h_le : k ≤ n) : le_lift_monAlg h_le =
     MonoidAlgebra.mapDomainAlgHom ℂ ℂ (Perm.viaEmbeddingHom (Fin.castLEEmb h_le)) :=
   rfl
+
+-- Ois kiva laittaa tää ja lt versio @simp mutta simp muuttaa kaikki A_of jutut
+-- singleiks ja rikkoo vähän niiku kaiken
+lemma le_lift_monAlg_perm_eq_le_lift_perm {n m : ℕ} {h_le : n ≤ m} {σ : S n} :
+    le_lift_monAlg h_le (A_of σ) = A_of (le_lift_perm h_le σ) := by
+  unfold le_lift_monAlg
+  simp
 
 
 def lt_lift_perm {k n : ℕ} (h_lt : k < n) : S k →* S n :=
@@ -47,7 +58,7 @@ def lt_lift_perm {k n : ℕ} (h_lt : k < n) : S k →* S n :=
 def lt_lift_monAlg {k n : ℕ} (h_lt : k < n) : A k →ₐ[ℂ] A n :=
   le_lift_monAlg (le_of_lt h_lt)
 
-
+-- Tarviiko näitä? Jos käyttäis vaa `unfold lt_lift_perm le_lift_perm`?
 theorem lt_lift_perm_def {k n : ℕ} (h_lt : k < n) :
     lt_lift_perm h_lt = Equiv.Perm.viaEmbeddingHom (Fin.castLEEmb $ le_of_lt h_lt) :=
   rfl
@@ -56,13 +67,37 @@ theorem lt_lift_monAlg_def {k n : ℕ} (h_lt : k < n) : lt_lift_monAlg h_lt =
     MonoidAlgebra.mapDomainAlgHom ℂ ℂ (Perm.viaEmbeddingHom (Fin.castLEEmb $ le_of_lt h_lt)) :=
   rfl
 
-#check AlgHom.comp_apply
-#check MonoidHom.
 
+lemma lt_lift_monAlg_perm_eq_lt_lift_perm {n m : ℕ} {h_lt : n < m} {σ : S n} :
+    lt_lift_monAlg h_lt (A_of σ) = A_of (lt_lift_perm h_lt σ) := by
+  unfold lt_lift_monAlg lt_lift_perm
+  exact le_lift_monAlg_perm_eq_le_lift_perm
+
+
+
+
+
+#check AlgHom.comp_apply
+
+-- TODO: Tarviikohan tätä? Varmaan joo
 theorem viaEmbeddingHom_trans {α β γ : Type*} (ι : α ↪ β) (κ : β ↪ γ) :
     (Perm.viaEmbeddingHom κ).comp (Perm.viaEmbeddingHom ι) = Perm.viaEmbeddingHom (ι.trans κ) := by
+
+  apply MonoidHom.ext
+  intro σ
+  rw [MonoidHom.comp_apply]
+  rw [Perm.viaEmbeddingHom_apply]
+  rw [Perm.viaEmbeddingHom_apply]
+  rw [Perm.viaEmbeddingHom_apply]
+
+  unfold Perm.viaEmbedding
+  --simp
+  rw [Perm.extendDomain_trans]
+  -- Saako jotenkin σ otettua takasin että RHS ois .trans?
+
   sorry
 
+-- TODO:
 theorem le_lift_monAlg_trans {k l n : ℕ} (hkl : k ≤ l) (hln : l ≤ n) {a : A k} :
     le_lift_monAlg hln (le_lift_monAlg hkl a) = le_lift_monAlg (le_trans hkl hln) a := by
   rw [le_lift_monAlg_def, le_lift_monAlg_def]
@@ -96,9 +131,30 @@ lemma lift_monAlg_inj {n : ℕ} : Function.Injective ↑(@lift_monAlg n) :=
 
 
 noncomputable def jmElem (k n : ℕ) [NeZero n] : A n :=
-  ∑ i : Fin n with ↑i ∈ Finset.range (k - 1), A_of n (swap i ↑(k - 1))
+  ∑ i : Fin n with ↑i ∈ Finset.range (k - 1), A_of (swap i ↑(k - 1))
 
 
+
+-- vois käyttää yleisempää elementtiäki ku `m - 1` mut se riittää
+lemma lt_lift_perm_swap_eq_swap_lt_lift_perm {n m : ℕ} [NeZero n] [NeZero m] (h_lt : n < m) (σ : S n) (i : Fin m) :
+    (lt_lift_perm h_lt) σ * swap i ↑(m - 1) = (swap (lt_lift_perm h_lt σ i) ↑(m - 1)) * (lt_lift_perm h_lt) σ := by
+  -- Really long way of saying that `σ` fixes `m - 1`
+  nth_rw 2 [←σ.viaEmbedding_apply_of_not_mem (Fin.castLEEmb $ le_of_lt h_lt) ↑(m - 1) (by simp; exact Nat.le_sub_one_of_lt h_lt)]
+  -- Change the unfolded definitions back
+  change (lt_lift_perm h_lt) σ * swap i ↑(m - 1) = swap (lt_lift_perm h_lt σ i) ((lt_lift_perm h_lt σ) ↑(m - 1)) * (lt_lift_perm h_lt) σ
+
+  rw [Perm.mul_def, Perm.mul_def] -- Rewrite using the definition of multiplication
+
+  rw [← Equiv.symm_trans_swap_trans i ↑(m - 1) (lt_lift_perm h_lt σ)] -- Main lemma
+
+  -- Lastly, cancel σ's
+  rw [Equiv.trans_assoc]
+  rw [← Equiv.trans_assoc (lt_lift_perm h_lt σ) (lt_lift_perm h_lt σ).symm (Equiv.trans (swap i ↑(m - 1)) (lt_lift_perm h_lt σ))]
+  simp
+
+
+
+@[deprecated lt_lift_perm_swap_eq_swap_lt_lift_perm (since := "2025-5-29")]
 lemma σ_swap_eq_swap_σ {n : ℕ} [NeZero n] (σ : S n) (i : Fin n) (hσ : σ ↑(n - 1) = ↑(n - 1)) :
     σ * (swap i ↑(n - 1)) = (swap (σ i) ↑(n - 1)) * σ := by
   nth_rw 2 [← hσ]
@@ -109,18 +165,78 @@ lemma σ_swap_eq_swap_σ {n : ℕ} [NeZero n] (σ : S n) (i : Fin n) (hσ : σ �
   rw [Equiv.trans_assoc, ← Equiv.trans_assoc σ σ.symm (Equiv.trans (swap i ↑(n - 1)) σ)] -- Cancel σ's
   simp
 
+-- This lemma only sums over the part which σ actually permutes: `σ_sum_perm_eq` takes
+-- care of the fixed part
+lemma σ_sum_perm_eq_aux {n m k : ℕ} (hn_lt_m : n < m) [NeZero m] (σ : S n) :
+    ∑ i : Fin m with ↑i ∈ Finset.range n, A_of (swap (lt_lift_perm hn_lt_m σ i) k)
+      = ∑ i : Fin m with ↑i ∈ Finset.range n, A_of (swap i k) := by
 
--- Ei varmaankaan toimi koska σ n = n ei oo riittävä hypoteesi: tarvitaa σ k = k kaikille k ≥ n
--- EI KORJATA JOO TÄTÄ: alempi versio saadaan varmasti helpommin
-lemma σ_sum_perm_eq {n m : ℕ} (h_lt : n < m) [NeZero m] : ∀ σ : (S m), (σ n = n) →
-    ∑ i : Fin m with ↑i ∈ Finset.range n, A_of m (swap (σ i) n)
-      = ∑ i : Fin m with ↑i ∈ Finset.range n, A_of m (swap i n) := by
+  -- Suffices to show that σ' maps the sets we sum over to each other
+  suffices h_lt_iff : ∀ i : Fin m, i ∈ {i | ↑i ∈ Finset.range n} ↔
+      lt_lift_perm hn_lt_m σ i ∈ {i : Fin m | ↑i ∈ Finset.range n}
+  · apply Finset.sum_equiv (lt_lift_perm hn_lt_m σ)
+    · simp at h_lt_iff ⊢ -- Basically holds by definition
+      exact h_lt_iff
+    · intro i hi -- Also basically by definition
+      rfl
+
+  simp
+  -- This should be obvious by definition of lifting permutations.
+  -- However, this is made difficult since there does not exist a general
+  -- `Fin.castPred` for arbitrary descents like there is for arbitrary lifts: `Fin.castLEEmb`
+  intro i
+  constructor <;> intro h
+  · unfold lt_lift_perm le_lift_perm
+    rw [Perm.viaEmbeddingHom_apply]
+
+    -- To use `Perm.viaEmbedding_apply`, we need to take the pre-image of i under Fin.castLEEmb.
+    -- This is quite annoying to do. Is there a better way?
+    let i_subtype : ↑(Set.range (Fin.castLEEmb $ le_of_lt hn_lt_m)) := ⟨i, by simp; exact h⟩
+    let i_fin_n : Fin n := (Fin.castLEEmb $ le_of_lt hn_lt_m).invOfMemRange i_subtype
+
+    have hi_eq_lift_i_fin_n : (Fin.castLEEmb $ le_of_lt hn_lt_m) i_fin_n = i := by
+      unfold i_fin_n
+      simp
+      rfl
+
+    rw [←hi_eq_lift_i_fin_n]
+    rw [σ.viaEmbedding_apply]
+    simp
+  · unfold lt_lift_perm le_lift_perm at h
+    rw [Perm.viaEmbeddingHom_apply] at h
+
+    -- This direction is a bit easier since lifted permutations fix elements not
+    -- in range of the embedding
+    by_contra h_ge
+
+    have hi_not_in_range : i ∉ Set.range ↑(Fin.castLEEmb $ le_of_lt hn_lt_m) := by
+      simp
+      exact Nat.le_of_not_lt h_ge
+
+    rw [σ.viaEmbedding_apply_of_not_mem (Fin.castLEEmb $ le_of_lt hn_lt_m) i hi_not_in_range] at h
+    exact h_ge h
+
+
+-- This also could be generalized to sum up to any `l` with `n ≤ l < m`
+-- but there is really no need
+lemma σ_sum_perm_eq {n m k : ℕ} (h_lt : n < m) [NeZero m] (σ : S n) :
+    ∑ i : Fin m with ↑i ∈ Finset.range (m - 1), A_of (swap (lt_lift_perm h_lt σ i) k)
+      = ∑ i : Fin m with ↑i ∈ Finset.range (m - 1), A_of (swap i k) := by
+  -- Some lemma here about sum being equal to sum + another sum
+  sorry
+
+
+-- EI KORJATA TÄTÄ: yllä uus versio
+@[deprecated σ_sum_perm_eq (since := "2025-5-29")]
+lemma σ_sum_perm_eq' {n m : ℕ} (h_lt : n < m) [NeZero m] : ∀ σ : (S m), (σ n = n) →
+    ∑ i : Fin m with ↑i ∈ Finset.range n, A_of (swap (σ i) n)
+      = ∑ i : Fin m with ↑i ∈ Finset.range n, A_of (swap i n) := by
 
   intro σ hσ
 
   -- We want to use Finset.sum_equiv σ with the following f, g and of course σ.
-  let f : Fin m → A m := fun k ↦ A_of m (swap (σ k) n)
-  let g : Fin m → A m := fun k ↦ A_of m (swap k n)
+  let f : Fin m → A m := fun k ↦ A_of (swap (σ k) n)
+  let g : Fin m → A m := fun k ↦ A_of (swap k n)
 
   have h_lt_iff : ∀ i : Fin m, i ∈ {i | ↑i ∈ Finset.range n} ↔
       σ i ∈ {i : Fin m | ↑i ∈ Finset.range n} := by
@@ -163,60 +279,37 @@ lemma σ_sum_perm_eq {n m : ℕ} (h_lt : n < m) [NeZero m] : ∀ σ : (S m), (σ
   exact h_sum_eq
 
 
-lemma σ_sum_perm_eq' {n m : ℕ} (h_lt : n < m) [NeZero m] (σ : S n) :
-    ∑ i : Fin m with ↑i ∈ Finset.range n, A_of m (swap (lt_lift_perm h_lt σ i) n)
-      = ∑ i : Fin m with ↑i ∈ Finset.range n, A_of m (swap i n) := by
-
-  -- Suffices to show that σ' maps the sets we sum over to each other
-  suffices h_lt_iff : ∀ i : Fin m, i ∈ {i | ↑i ∈ Finset.range n} ↔
-      lt_lift_perm h_lt σ i ∈ {i : Fin m | ↑i ∈ Finset.range n}
-  · apply Finset.sum_equiv (lt_lift_perm h_lt σ)
-    · simp at h_lt_iff ⊢ -- Basically holds by definition
-      exact h_lt_iff
-    · intro i hi -- Also basically by definition
-      rfl
-
-  simp
-  -- This should be obvious by definition of lifting permutations.
-  -- However, this is made difficult since there does not exist a general
-  -- `Fin.castPred` for arbitrary descents like there is for arbitrary lifts: `Fin.castLEEmb`
-  intro i
-  constructor <;> intro h
-  · unfold lt_lift_perm le_lift_perm
-    rw [Perm.viaEmbeddingHom_apply]
-
-    -- To use `Perm.viaEmbedding_apply`, we need to take the pre-image of i under Fin.castLEEmb.
-    -- This is quite annoying to do. Is there a better way?
-    let i_subtype : ↑(Set.range (Fin.castLEEmb $ le_of_lt h_lt)) := ⟨i, by simp; exact h⟩
-    let i_fin_n : Fin n := (Fin.castLEEmb $ le_of_lt h_lt).invOfMemRange i_subtype
-
-    have hi_eq_lift_i_fin_n : (Fin.castLEEmb $ le_of_lt h_lt) i_fin_n = i := by
-      unfold i_fin_n
-      simp
-      rfl
-
-    rw [←hi_eq_lift_i_fin_n]
-    rw [σ.viaEmbedding_apply]
-    simp
-  · unfold lt_lift_perm le_lift_perm at h
-    rw [Perm.viaEmbeddingHom_apply] at h
-
-    -- This direction is a bit easier since lifted permutations fix elements not
-    -- in range of the embedding
-    by_contra h_ge
-
-    have hi_not_in_range : i ∉ Set.range ↑(Fin.castLEEmb $ le_of_lt h_lt) := by
-      simp
-      exact Nat.le_of_not_lt h_ge
-
-    rw [σ.viaEmbedding_apply_of_not_mem (Fin.castLEEmb $ le_of_lt h_lt) i hi_not_in_range] at h
-    exact h_ge h
 
 
+-- `jmElem_succ_comm_perm` suoraan käyttäen `σ_sum_perm_eq` koska
+-- en saanu aiempaa todistettua enää + tää helpompi anyway
+theorem jmElem_succ_comm_perm_remake {n m : ℕ} [NeZero n] [NeZero m] (σ : S n) (h_lt : n < m) :
+    Commute (jmElem m m) (lt_lift_monAlg h_lt (A_of σ)) := by
+  rw [jmElem, commute_iff_eq]
+
+  -- Distributivity
+  rw [Finset.mul_sum]
+
+  conv =>
+    enter [2, 2, i]
+    rw [lt_lift_monAlg_perm_eq_lt_lift_perm]
+    rw [←MonoidHom.map_mul A_of (lt_lift_perm h_lt σ) (swap i ↑(m - 1))]
+    rw [lt_lift_perm_swap_eq_swap_lt_lift_perm]
+    rw [MonoidHom.map_mul A_of (swap (lt_lift_perm h_lt σ i) ↑(m - 1))]
+
+  conv =>
+    rhs
+    rw [←Finset.sum_mul]
+
+  -- Use the reordering lemma
+  rw [σ_sum_perm_eq]
+  -- lift_perm same as lift_monAlg
+  rw [lt_lift_monAlg_perm_eq_lt_lift_perm]
 
 
+@[deprecated jmElem_succ_comm_perm_remake (since := "2025-5-29")]
 theorem jmElem_succ_comm_perm' {n m : ℕ} (h_lt : n < m) [NeZero m] (σ : S m) (hσ : ∀ k ∈ Finset.Ico n m, σ k = k) :
-    Commute (jmElem m m) (A_of m σ) := by
+    Commute (jmElem m m) (A_of σ) := by
   rw [jmElem, commute_iff_eq]
 
   -- Distributivity
@@ -231,9 +324,9 @@ theorem jmElem_succ_comm_perm' {n m : ℕ} (h_lt : n < m) [NeZero m] (σ : S m) 
   -- Coercion to MonoidAlgebra multiplicative
   conv =>
     enter [2, 2, i]
-    rw [(MonoidHom.map_mul (A_of m) σ (swap i ↑(m - 1))).symm]
+    rw [(MonoidHom.map_mul A_of σ (swap i ↑(m - 1))).symm]
     rw [σ_swap_eq_swap_σ σ i (hσ (m - 1) h_m_pred_mem)]
-    rw [MonoidHom.map_mul (A_of m) (swap (σ i) ↑(m - 1)) σ]
+    rw [MonoidHom.map_mul A_of (swap (σ i) ↑(m - 1)) σ]
 
   conv =>
     rhs
@@ -242,14 +335,17 @@ theorem jmElem_succ_comm_perm' {n m : ℕ} (h_lt : n < m) [NeZero m] (σ : S m) 
   have hm : m - 1 < m := Nat.sub_one_lt_of_lt h_lt
 
   -- Use the reordering lemma
-  rw [σ_sum_perm_eq hm]
+  rw [σ_sum_perm_eq' hm]
   exact hσ (m - 1) h_m_pred_mem
+
+
+
 
 
 -- TÄÄ MYÖS UTILS
 @[simp]
 lemma lift_monAlg_of_eq_of_lift_perm {n m : ℕ} (h_lt : n < m) (σ : S n) :
-    lt_lift_monAlg h_lt (A_of n σ) = A_of m (lt_lift_perm h_lt σ) := by
+    lt_lift_monAlg h_lt (A_of σ) = A_of (lt_lift_perm h_lt σ) := by
   rw [lt_lift_monAlg_def, lt_lift_perm_def]
   simp
 
@@ -270,6 +366,7 @@ lemma lift_monAlg_of_eq_of_lift_perm {n m : ℕ} (h_lt : n < m) (σ : S n) :
 -- Finset.sum_comp {α : Type u_3} {β : Type u_4} {γ : Type u_5} {s : Finset α}
 --  (f : γ → β) (g : α → γ) : ∑ a ∈ s, f (g a) = ∑ b ∈ Finset.image g s, {a ∈ s | g a = b}.card • f b
 
+-- TODO
 lemma le_lift_perm_swap {n m k : ℕ} (x : Fin n) [NeZero n] [NeZero m] (h_le : n ≤ m) :
     (le_lift_perm h_le) (swap x ↑k) = swap (x : Fin m) ↑k := by
   unfold le_lift_perm
@@ -357,9 +454,9 @@ lemma lt_lift_monAlg_jmElem_eq {n m k : ℕ} [NeZero n] [NeZero m] [NeZero k] (n
   le_lift_monAlg_jmElem_eq (le_of_lt n_lt_m) k_le_n
 
 
-
+@[deprecated jmElem_succ_comm_perm_remake (since := "2025-5-29")]
 theorem jmElem_succ_comm_perm {n m : ℕ} [NeZero n] [NeZero m] (σ : S n) (h_lt : n < m) :
-    Commute (jmElem m m) (lt_lift_monAlg h_lt (A_of n σ)) := by
+    Commute (jmElem m m) (lt_lift_monAlg h_lt (A_of σ)) := by
 
   have h_range : ∀ k ∈ Finset.Ico n m, (↑k : Fin m) ∉ Set.range (Fin.castLEEmb (le_of_lt h_lt)) := by
     rw [Fin.coe_castLEEmb (le_of_lt h_lt), Fin.range_castLE]
@@ -406,7 +503,7 @@ theorem jmElem_succ_comm_monAlg {n m : ℕ} [NeZero m] [NeZero n] (a : A n) (h_l
   conv in fun i ↦ _ =>
     intro i
     rw [mul_smul_comm]
-    tactic => have comm_perm := jmElem_succ_comm_perm i h_lt
+    tactic => have comm_perm := jmElem_succ_comm_perm_remake i h_lt
     tactic => simp at comm_perm
     rw [comm_perm]
     rw [← smul_mul_assoc]
@@ -477,7 +574,7 @@ def jmElem_subAlg (n : ℕ) [NeZero n] : Subalgebra ℂ (A n) := Algebra.adjoin 
 
 -- To be precise, we call an algebra commutative if the underlying semiring of this
 -- (the structure we get when forgetting scalar multiplication) is commutative
-instance jmeElem_adjoin_comm (n : ℕ) [NeZero n] : CommSemiring (jmElem_subAlg n) := by
+instance jmElem_adjoin_comm (n : ℕ) [NeZero n] : CommSemiring (jmElem_subAlg n) := by
   -- MAIN LEMMA: Underlying semiring of a subalgebra commutative if generators commute
   apply Algebra.adjoinCommSemiringOfComm
 
