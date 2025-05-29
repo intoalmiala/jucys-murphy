@@ -162,56 +162,55 @@ lemma σ_sum_perm_eq {n m : ℕ} (h_lt : n < m) [NeZero m] : ∀ σ : (S m), (σ
   unfold f g at h_sum_eq
   exact h_sum_eq
 
--- TODO: joko todista tää
+
 lemma σ_sum_perm_eq' {n m : ℕ} (h_lt : n < m) [NeZero m] (σ : S n) :
     ∑ i : Fin m with ↑i ∈ Finset.range n, A_of m (swap (lt_lift_perm h_lt σ i) n)
       = ∑ i : Fin m with ↑i ∈ Finset.range n, A_of m (swap i n) := by
 
-  -- Lifted σ
-  let σ' := lt_lift_perm h_lt σ
-
   -- Suffices to show that σ' maps the sets we sum over to each other
   suffices h_lt_iff : ∀ i : Fin m, i ∈ {i | ↑i ∈ Finset.range n} ↔
       lt_lift_perm h_lt σ i ∈ {i : Fin m | ↑i ∈ Finset.range n}
-  · apply Finset.sum_equiv σ'
-    · unfold σ' -- Basically holds by definition
-      simp at h_lt_iff ⊢
+  · apply Finset.sum_equiv (lt_lift_perm h_lt σ)
+    · simp at h_lt_iff ⊢ -- Basically holds by definition
       exact h_lt_iff
-    · unfold σ' -- Also basically by definition
-      intro i hi
+    · intro i hi -- Also basically by definition
       rfl
 
-  /- This should now be doable using:
-      1. Perm.extend_domain_apply_subtype, ...
-      2. Equiv.Perm??+
-
-  -/
-
-  intro i
-  rw [lt_lift_perm_def]
   simp
-  rw [Perm.viaEmbeddingHom_apply]
-  constructor
-  · intro h_le
-    sorry
-  · by_contra h_eq
-    simp at h_eq
-    obtain ⟨h_leq, h_nleq⟩ := h_eq
-    have := i.isLt
-    -- have h_eq : n = ↑i := (Nat.eq_of_le_of_lt_succ h_nleq i.isLt).symm
-    -- rw [←h_eq] at h_leq
+  -- This should be obvious by definition of lifting permutations.
+  -- However, this is made difficult since there does not exist a general
+  -- `Fin.castPred` for arbitrary descents like there is for arbitrary lifts: `Fin.castLEEmb`
+  intro i
+  constructor <;> intro h
+  · unfold lt_lift_perm le_lift_perm
+    rw [Perm.viaEmbeddingHom_apply]
 
+    -- To use `Perm.viaEmbedding_apply`, we need to take the pre-image of i under Fin.castLEEmb.
+    -- This is quite annoying to do. Is there a better way?
+    let i_subtype : ↑(Set.range (Fin.castLEEmb $ le_of_lt h_lt)) := ⟨i, by simp; exact h⟩
+    let i_fin_n : Fin n := (Fin.castLEEmb $ le_of_lt h_lt).invOfMemRange i_subtype
 
-    #check Perm.viaEmbedding_apply_of_not_mem σ Fin.castSuccEmb
-    sorry
+    have hi_eq_lift_i_fin_n : (Fin.castLEEmb $ le_of_lt h_lt) i_fin_n = i := by
+      unfold i_fin_n
+      simp
+      rfl
 
-  --rw [Perm.viaEmbedding_apply_of_not_mem σ Fin.castSuccEmb i (by simp)]
-  --constructor
-  --· intro h_le
+    rw [←hi_eq_lift_i_fin_n]
+    rw [σ.viaEmbedding_apply]
+    simp
+  · unfold lt_lift_perm le_lift_perm at h
+    rw [Perm.viaEmbeddingHom_apply] at h
 
+    -- This direction is a bit easier since lifted permutations fix elements not
+    -- in range of the embedding
+    by_contra h_ge
 
+    have hi_not_in_range : i ∉ Set.range ↑(Fin.castLEEmb $ le_of_lt h_lt) := by
+      simp
+      exact Nat.le_of_not_lt h_ge
 
-  sorry
+    rw [σ.viaEmbedding_apply_of_not_mem (Fin.castLEEmb $ le_of_lt h_lt) i hi_not_in_range] at h
+    exact h_ge h
 
 
 
@@ -353,10 +352,9 @@ lemma le_lift_monAlg_jmElem_eq {n m k : ℕ} [NeZero n] [NeZero m] [NeZero k] (n
 
 
 
-lemma lt_lift_monAlg_jmElem_eq {n m k : ℕ} [NeZero n] [NeZero m] (h_lt : n < m) :
-    lt_lift_monAlg h_lt (jmElem k n) = jmElem k m :=
-  le_lift_monAlg_jmElem_eq (le_of_lt h_lt)
-
+lemma lt_lift_monAlg_jmElem_eq {n m k : ℕ} [NeZero n] [NeZero m] [NeZero k] (n_lt_m : n < m) (k_le_n : k ≤ n) :
+    lt_lift_monAlg n_lt_m (jmElem k n) = jmElem k m :=
+  le_lift_monAlg_jmElem_eq (le_of_lt n_lt_m) k_le_n
 
 
 
@@ -419,29 +417,31 @@ theorem jmElem_succ_comm_monAlg {n m : ℕ} [NeZero m] [NeZero n] (a : A n) (h_l
 --set_option diagnostics true
 
 
-lemma lift_jmElem_comm {n m k l : ℕ} [NeZero n] [NeZero m] [NeZero k] [NeZero l] (h_lt : n ≤ m) (h_comm : Commute (jmElem k n) (jmElem l n)) :
+lemma lift_jmElem_comm {n m k l : ℕ} [NeZero n] [NeZero m] [NeZero k] [NeZero l] (hn_le_m : n ≤ m) (hk_le_n : k ≤ n) (hl_le_n : l ≤ n)  (h_comm : Commute (jmElem k n) (jmElem l n)) :
     Commute (jmElem k m) (jmElem l m) := by
-  repeat rw [← le_lift_monAlg_jmElem_eq h_lt]
+  repeat rw [← le_lift_monAlg_jmElem_eq hn_le_m]
   rw [commute_iff_eq] at *
-  repeat rw [← map_mul $ le_lift_monAlg h_lt]
+  repeat rw [← map_mul $ le_lift_monAlg hn_le_m]
   rw [h_comm]
+  all_goals assumption
 
-lemma jmElem_comm' {n k l : ℕ} [NeZero n] [NeZero k] [NeZero l] (h_le : l ≤ n) (h_lt : k < l) :
+lemma jmElem_comm' {n k l : ℕ} [NeZero n] [NeZero k] [NeZero l] (hl_le_n : l ≤ n) (hk_lt_l : k < l) :
     Commute (jmElem k n) (jmElem l n) := by
 
-  have l_pred_le_n : l - 1 ≤ n := le_trans (by simp) h_le
+  have l_pred_le_n : l - 1 ≤ n := le_trans (by simp) hl_le_n
 
   have l_pred_nz : NeZero (l - 1) := by
     apply NeZero.of_pos
     simp
     have k_nz : k > 0 := Nat.pos_of_neZero k
-    exact Nat.lt_of_le_of_lt k_nz h_lt
+    exact Nat.lt_of_le_of_lt k_nz hk_lt_l
 
-  have h_lt : l - 1 < l := Nat.sub_one_lt_of_lt h_lt
+  have h_lt : l - 1 < l := Nat.sub_one_lt_of_lt hk_lt_l
 
   suffices h : Commute (lt_lift_monAlg h_lt $ jmElem k (l - 1)) (jmElem l l) by
     rw [lt_lift_monAlg_jmElem_eq h_lt] at h
-    exact lift_jmElem_comm h_le h
+    exact lift_jmElem_comm hl_le_n (by linarith) (by linarith) h
+    exact Nat.le_pred_of_lt hk_lt_l
 
   exact (jmElem_succ_comm_monAlg (jmElem k (l - 1)) h_lt).symm
 
@@ -461,8 +461,11 @@ theorem jmElem_comm {n k l : ℕ} [NeZero n] [NeZero k] [NeZero l] (h_le : l ≤
   intro h_lt
   exact jmElem_comm' h_le.left h_lt
 
-  -- BRUH
-  -- About X_nsucc_comm_with_C_S_n input jmElem' m k
+
+
+
+
+
 
 
 -- All Jucys-Murphy elements belonging to ℂ[Sₙ]
@@ -471,10 +474,9 @@ def jmElem_set (n : ℕ) [NeZero n] : Set (A n) := {x | ∃ (m : ℕ), m ∈ Set
 -- In Lean, the structure generated by some set is called the `adjoin`
 def jmElem_subAlg (n : ℕ) [NeZero n] : Subalgebra ℂ (A n) := Algebra.adjoin ℂ (jmElem_set n)
 
-#check CommRing
 
--- There is no instance for a commutative algebra, but algebras are implemented
--- as `Semiring`s with some properties so `CommSemiring` instance suffices.
+-- To be precise, we call an algebra commutative if the underlying semiring of this
+-- (the structure we get when forgetting scalar multiplication) is commutative
 instance jmeElem_adjoin_comm (n : ℕ) [NeZero n] : CommSemiring (jmElem_subAlg n) := by
   -- MAIN LEMMA: Underlying semiring of a subalgebra commutative if generators commute
   apply Algebra.adjoinCommSemiringOfComm
