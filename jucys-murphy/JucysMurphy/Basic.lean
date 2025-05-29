@@ -143,14 +143,7 @@ lemma lt_lift_perm_swap_eq_swap_lt_lift_perm {n m : ℕ} [NeZero n] [NeZero m] (
   -- Change the unfolded definitions back
   change (lt_lift_perm h_lt) σ * swap i ↑(m - 1) = swap (lt_lift_perm h_lt σ i) ((lt_lift_perm h_lt σ) ↑(m - 1)) * (lt_lift_perm h_lt) σ
 
-  rw [Perm.mul_def, Perm.mul_def] -- Rewrite using the definition of multiplication
-
-  rw [← Equiv.symm_trans_swap_trans i ↑(m - 1) (lt_lift_perm h_lt σ)] -- Main lemma
-
-  -- Lastly, cancel σ's
-  rw [Equiv.trans_assoc]
-  rw [← Equiv.trans_assoc (lt_lift_perm h_lt σ) (lt_lift_perm h_lt σ).symm (Equiv.trans (swap i ↑(m - 1)) (lt_lift_perm h_lt σ))]
-  simp
+  rw [Equiv.mul_swap_eq_swap_mul] -- Main lemma
 
 
 
@@ -365,6 +358,18 @@ lemma lift_monAlg_of_eq_of_lift_perm {n m : ℕ} (h_lt : n < m) (σ : S n) :
 
 -- Finset.sum_comp {α : Type u_3} {β : Type u_4} {γ : Type u_5} {s : Finset α}
 --  (f : γ → β) (g : α → γ) : ∑ a ∈ s, f (g a) = ∑ b ∈ Finset.image g s, {a ∈ s | g a = b}.card • f b
+
+-- Tää ehk luonnollisempi käyttää? On kyllä tosi pitkäsanainen mutta joo
+lemma le_lift_perm_swap' {n m : ℕ} {i j : Fin n} (h_le : n ≤ m) :
+    (le_lift_perm h_le) (swap i j) = swap (Fin.castLEEmb h_le i) (Fin.castLEEmb h_le j) := by
+  unfold le_lift_perm
+  rw [Perm.viaEmbeddingHom_apply]
+  ext x
+  --by_cases
+  -- Tällä tarttis enää et liftaus sama ku kompositio sillä embedding
+  #check Function.Embedding.swap_comp
+  sorry
+
 
 -- TODO
 lemma le_lift_perm_swap {n m k : ℕ} (x : Fin n) [NeZero n] [NeZero m] (h_le : n ≤ m) :
