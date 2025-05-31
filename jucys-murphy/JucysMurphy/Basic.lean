@@ -137,7 +137,7 @@ noncomputable def jmElem (k n : ℕ) [NeZero n] : A n :=
 
 
 -- Tälläsen tarttee välillä jotta jmElem saadaa rewritattua
-lemma sum_fin_eq_sum_range {M : Type} [AddCommMonoid M] (n m : ℕ) [NeZero n] (h_le : m ≤ n) (f : Fin n → M) :
+lemma sum_fin_eq_sum_range {M : Type} [AddCommMonoid M] {n m : ℕ} [NeZero n] (h_le : m ≤ n) (f : Fin n → M) :
     ∑ i : Fin n with ↑i ∈ Finset.range m, f i
       = ∑ i ∈ Finset.range m, f (i : Fin n) := by
   simp
@@ -241,8 +241,8 @@ lemma σ_sum_perm_eq {n m k : ℕ} (h_lt : n < m) [NeZero m] (σ : S n) :
     ∑ i : Fin m with ↑i ∈ Finset.range (m - 1), A_of (swap (lt_lift_perm h_lt σ i) k)
       = ∑ i : Fin m with ↑i ∈ Finset.range (m - 1), A_of (swap i k) := by
   -- To use the main lemma, we need to write these in another form
-  rw [sum_fin_eq_sum_range _ _ (by simp)]
-  rw [sum_fin_eq_sum_range _ _ (by simp)]
+  rw [sum_fin_eq_sum_range (by simp)]
+  rw [sum_fin_eq_sum_range (by simp)]
 
   rw [Finset.range_eq_Ico] -- Change to use intervals instead
 
@@ -258,8 +258,8 @@ lemma σ_sum_perm_eq {n m k : ℕ} (h_lt : n < m) [NeZero m] (σ : S n) :
 
   -- Rewrite the first parts back: these equal by auxiliary lemma
   rw [←Finset.range_eq_Ico] -- Change back to use ranges
-  rw [←(sum_fin_eq_sum_range m n (le_of_lt h_lt) (fun x => A_of (swap (((lt_lift_perm h_lt) σ) ↑x) ↑k)))]
-  rw [←(sum_fin_eq_sum_range m n (le_of_lt h_lt) (fun x => A_of (swap ↑x ↑k)))]
+  rw [←(sum_fin_eq_sum_range (le_of_lt h_lt) (fun x => A_of (swap (((lt_lift_perm h_lt) σ) ↑x) ↑k)))]
+  rw [←(sum_fin_eq_sum_range (le_of_lt h_lt) (fun x => A_of (swap ↑x ↑k)))]
 
   rw [σ_sum_perm_eq_aux] -- Use the auxiliary lemma
   rw [add_right_inj] -- Cancel
@@ -428,9 +428,9 @@ lemma lift_monAlg_of_eq_of_lift_perm {n m : ℕ} (h_lt : n < m) (σ : S n) :
 -- Finset.sum_comp {α : Type u_3} {β : Type u_4} {γ : Type u_5} {s : Finset α}
 --  (f : γ → β) (g : α → γ) : ∑ a ∈ s, f (g a) = ∑ b ∈ Finset.image g s, {a ∈ s | g a = b}.card • f b
 
--- Tää ehk luonnollisempi käyttää? On kyllä tosi pitkäsanainen mutta joo
-lemma le_lift_perm_swap' {n m : ℕ} {i j : Fin n} (h_le : n ≤ m) :
-    (le_lift_perm h_le) (swap i j) = swap (Fin.castLEEmb h_le i) (Fin.castLEEmb h_le j) := by
+
+lemma le_lift_perm_swap' {n m i j : ℕ} [NeZero n] [NeZero m] (n_le_m : n ≤ m) (i_le_n : i ≤ n) (j_le_n : j ≤ n):
+    (le_lift_perm n_le_m) (swap ↑i ↑j) = swap ↑i ↑j := by
   unfold le_lift_perm
   rw [Perm.viaEmbeddingHom_apply]
   ext x
@@ -440,7 +440,7 @@ lemma le_lift_perm_swap' {n m : ℕ} {i j : Fin n} (h_le : n ≤ m) :
   sorry
 
 
--- TODO
+
 lemma le_lift_perm_swap {n m k : ℕ} (x : Fin n) [NeZero n] [NeZero m] (h_le : n ≤ m) :
     (le_lift_perm h_le) (swap x ↑k) = swap (x : Fin m) ↑k := by
   unfold le_lift_perm
@@ -450,6 +450,28 @@ lemma le_lift_perm_swap {n m k : ℕ} (x : Fin n) [NeZero n] [NeZero m] (h_le : 
 
   rw [Perm.viaEmbedding]
   sorry
+
+
+-- Vois tehå vielä paljonki simppelimmäks: tää oli vaa miten sai nopee tehtyy
+lemma le_lift_monAlg_jmElem_eq' {n m k : ℕ} [NeZero n] [NeZero m] [NeZero k] (n_le_m : n ≤ m) (k_le_n : k ≤ n) :
+    le_lift_monAlg n_le_m (jmElem k n) = jmElem k m := by
+  unfold jmElem
+  rw [map_sum] -- Linearity
+  rw [sum_fin_eq_sum_range (Nat.le_trans (Nat.le_trans (by simp) k_le_n) n_le_m)] -- This is again needed since we want to sum over a Fintype very often
+  rw [sum_fin_eq_sum_range (Nat.le_trans (by simp) k_le_n)]
+  apply Finset.sum_congr
+  · rfl
+  · intro i hi
+    rw [le_lift_monAlg_perm_eq_le_lift_perm]
+    congr
+    simp at hi
+    apply le_lift_perm_swap'
+    · -- Can't get linarith to do this nicely so a bit verbose
+      apply le_of_lt
+      exact Nat.lt_of_lt_of_le (Nat.lt_of_lt_pred hi) k_le_n
+    · exact Nat.le_trans (by simp) k_le_n
+
+
 
 #check Finset.univ.card
 #check Fin.natCast_lt_natCast
