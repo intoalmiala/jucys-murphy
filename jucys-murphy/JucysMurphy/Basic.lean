@@ -131,7 +131,7 @@ lemma lift_monAlg_inj {n : ℕ} : Function.Injective ↑(@lift_monAlg n) :=
 
 -- Pitäskö olla myös `NeZero k`?? Emt
 noncomputable def jmElem (k n : ℕ) [NeZero n] : A n :=
-  ∑ i : Fin n with ↑i ∈ Finset.range (k - 1), A_of (swap i (k - 1))
+  ∑ i : Fin n with ↑i ∈ Finset.range (k - 1), A_of (swap i ↑(k - 1))
 
 
 
