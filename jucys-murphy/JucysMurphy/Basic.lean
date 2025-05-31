@@ -129,9 +129,32 @@ lemma lift_perm_inj {n : ℕ} : Function.Injective ↑(@lift_perm n) :=
 lemma lift_monAlg_inj {n : ℕ} : Function.Injective ↑(@lift_monAlg n) :=
   Finsupp.mapDomain_injective (@lift_perm_inj n)
 
-
+-- Pitäskö olla myös `NeZero k`?? Emt
 noncomputable def jmElem (k n : ℕ) [NeZero n] : A n :=
-  ∑ i : Fin n with ↑i ∈ Finset.range (k - 1), A_of (swap i ↑(k - 1))
+  ∑ i : Fin n with ↑i ∈ Finset.range (k - 1), A_of (swap i (k - 1))
+
+
+
+
+-- Tälläsen tarttee välillä jotta jmElem saadaa rewritattua
+lemma sum_fin_eq_sum_range {M : Type} [AddCommMonoid M] (n m : ℕ) [NeZero n] (h_le : m ≤ n) (f : Fin n → M) :
+    ∑ i : Fin n with ↑i ∈ Finset.range m, f i
+      = ∑ i ∈ Finset.range m, f (i : Fin n) := by
+  simp
+
+  apply Finset.sum_nbij Fin.val
+  · simp
+  · exact Function.Injective.injOn Fin.val_injective
+  · simp  -- Tähä saa varmaa suoremmanki mut tää toimii
+    unfold Set.SurjOn
+    intro x hx
+    simp at hx
+    have h_lt := lt_of_lt_of_le hx h_le
+    use ⟨x, h_lt⟩
+    exact ⟨hx, rfl⟩
+  · simp
+
+
 
 
 
@@ -210,13 +233,59 @@ lemma σ_sum_perm_eq_aux {n m k : ℕ} (hn_lt_m : n < m) [NeZero m] (σ : S n) :
     exact h_ge h
 
 
+
+
 -- This also could be generalized to sum up to any `l` with `n ≤ l < m`
 -- but there is really no need
 lemma σ_sum_perm_eq {n m k : ℕ} (h_lt : n < m) [NeZero m] (σ : S n) :
     ∑ i : Fin m with ↑i ∈ Finset.range (m - 1), A_of (swap (lt_lift_perm h_lt σ i) k)
       = ∑ i : Fin m with ↑i ∈ Finset.range (m - 1), A_of (swap i k) := by
-  -- Some lemma here about sum being equal to sum + another sum
-  sorry
+  -- To use the main lemma, we need to write these in another form
+  rw [sum_fin_eq_sum_range _ _ (by simp)]
+  rw [sum_fin_eq_sum_range _ _ (by simp)]
+
+  rw [Finset.range_eq_Ico] -- Change to use intervals instead
+
+  -- We need 0 ≤ n, n ≤ m - 1 to split the sum at n
+  have h_zero_le_n : 0 ≤ n := by exact Nat.zero_le n
+  have h_n_le_mpred : n ≤ m - 1 := by exact Nat.le_sub_one_of_lt h_lt
+
+  -- MAIN LEMMA
+  rw [←Finset.sum_Ico_consecutive _ h_zero_le_n h_n_le_mpred]
+  rw [←Finset.sum_Ico_consecutive _ h_zero_le_n h_n_le_mpred]
+
+
+
+  -- Rewrite the first parts back: these equal by auxiliary lemma
+  rw [←Finset.range_eq_Ico] -- Change back to use ranges
+  rw [←(sum_fin_eq_sum_range m n (le_of_lt h_lt) (fun x => A_of (swap (((lt_lift_perm h_lt) σ) ↑x) ↑k)))]
+  rw [←(sum_fin_eq_sum_range m n (le_of_lt h_lt) (fun x => A_of (swap ↑x ↑k)))]
+
+  rw [σ_sum_perm_eq_aux] -- Use the auxiliary lemma
+  rw [add_right_inj] -- Cancel
+
+
+
+  -- Now using the fact that the lifted permutation fixes everything not in range, we are done
+  unfold lt_lift_perm le_lift_perm
+  rw [σ.viaEmbeddingHom_apply]
+
+  have hi_not_in_range : ∀ i ∈ Finset.Ico n (m - 1), ↑i ∉ Set.range ↑(Fin.castLEEmb $ le_of_lt h_lt) := by
+      simp
+      intro i h_ge h_lt
+      rw [Nat.mod_eq_of_lt]
+      exact h_ge
+      exact Nat.lt_of_lt_pred h_lt
+
+  -- Sums equal since sets and elements equal
+  apply Finset.sum_congr
+  · rfl
+  · intro i hi
+    rw [σ.viaEmbedding_apply_of_not_mem]
+    exact hi_not_in_range i hi
+
+
+
 
 
 -- EI KORJATA TÄTÄ: yllä uus versio
