@@ -316,16 +316,57 @@ lemma lift_monAlg_of_eq_of_lift_perm {n m : ℕ} (h_lt : n < m) (σ : S n) :
 -- Finset.sum_comp {α : Type u_3} {β : Type u_4} {γ : Type u_5} {s : Finset α}
 --  (f : γ → β) (g : α → γ) : ∑ a ∈ s, f (g a) = ∑ b ∈ Finset.image g s, {a ∈ s | g a = b}.card • f b
 
+#check Perm.viaFintypeEmbedding
+#check Fin.castLE
 
-lemma le_lift_perm_swap' {n m i j : ℕ} [NeZero n] [NeZero m] (n_le_m : n ≤ m) (i_le_n : i ≤ n) (j_le_n : j ≤ n):
+-- lemma le_lift_perm_swap' {n m i j : ℕ} [NeZero n] [NeZero m] (n_le_m : n ≤ m) (i_lt_n : i < n) (j_le_n : j ≤ n) :
+--     (le_lift_perm n_le_m) (swap ↑i ↑j) = swap ↑i ↑j := by
+--   unfold le_lift_perm
+--   rw [Perm.viaEmbeddingHom_apply]
+
+--   --by_cases
+--   -- Tällä tarttis enää et liftaus sama ku kompositio sillä embedding
+--   #check Function.Embedding.swap_comp
+
+--   let f := Fin.castLEEmb n_le_m
+
+--   suffices h : ⇑(swap (f ↑i) (f ↑j)) ∘ ⇑f = ⇑f ∘ ⇑(swap ↑i ↑j) by
+--     unfold f at h
+--     simp at h
+--     unfold Fin.castLE at h
+--     simp at h
+
+--     rw [Nat.mod_eq_of_lt i_lt_n]
+--     sorry
+
+--   exact f.swap_comp ↑i ↑j
+
+lemma le_lift_perm_swap' {n m i j : ℕ} [NeZero n] [NeZero m] (n_le_m : n ≤ m) (i_lt_n : i < n) (j_lt_n : j < n) :
     (le_lift_perm n_le_m) (swap ↑i ↑j) = swap ↑i ↑j := by
   unfold le_lift_perm
   rw [Perm.viaEmbeddingHom_apply]
-  ext x
-  --by_cases
+
+  have h_castLE_eq_coe (k : ℕ) (k_le_n : k ≤ n) : Fin.castLEEmb n_le_m ↑k = ↑k := by
+    sorry
+
+  rw [← h_castLE_eq_coe i (by linarith)]
+  rw [← h_castLE_eq_coe j j_lt_n]
+
   -- Tällä tarttis enää et liftaus sama ku kompositio sillä embedding
   #check Function.Embedding.swap_comp
-  sorry
+
+  let f := Fin.castLEEmb n_le_m
+
+  suffices h : ⇑(swap (f ↑i) (f ↑j)) ∘ ⇑f = ⇑f ∘ ⇑(swap ↑i ↑j) by
+    unfold f at h
+    simp at h
+    unfold Fin.castLE at h
+    simp at h
+
+    rw [Nat.mod_eq_of_lt i_lt_n]
+    sorry
+
+  exact f.swap_comp ↑i ↑j
 
 
 
@@ -338,6 +379,11 @@ lemma le_lift_perm_swap {n m k : ℕ} (x : Fin n) [NeZero n] [NeZero m] (h_le : 
 
   rw [Perm.viaEmbedding]
   sorry
+
+example (n m : ℕ) [NeZero n] (h : n ≤ m) : n - 1 < m := by
+  refine lt_of_lt_of_le ?_ h
+  simp
+  exact Nat.pos_of_neZero n
 
 
 -- Vois tehå vielä paljonki simppelimmäks: tää oli vaa miten sai nopee tehtyy
@@ -355,9 +401,10 @@ lemma le_lift_monAlg_jmElem_eq {n m k : ℕ} [NeZero n] [NeZero m] [NeZero k] (n
     simp at hi
     apply le_lift_perm_swap'
     · -- Can't get linarith to do this nicely so a bit verbose
-      apply le_of_lt
       exact Nat.lt_of_lt_of_le (Nat.lt_of_lt_pred hi) k_le_n
-    · exact Nat.le_trans (by simp) k_le_n
+    · refine lt_of_lt_of_le ?_ k_le_n
+      simp
+      exact Nat.pos_of_neZero k
 
 
 lemma lt_lift_monAlg_jmElem_eq {n m k : ℕ} [NeZero n] [NeZero m] [NeZero k] (n_lt_m : n < m) (k_le_n : k ≤ n) :
