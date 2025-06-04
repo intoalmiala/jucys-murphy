@@ -1,99 +1,14 @@
 import Mathlib
-
-
+import JucysMurphy.Utils
 
 open Equiv
 
 
-abbrev S (n : ℕ) := Perm (Fin n)
-abbrev A (n : ℕ) := MonoidAlgebra ℂ (S n)
-noncomputable abbrev A_of {n : ℕ} := MonoidAlgebra.of ℂ (S n)
-
-
-
 noncomputable section
 
-
-def kth_lift_perm (n k : ℕ) : S n →* S (n + k) :=
-  Equiv.Perm.viaEmbeddingHom (Fin.castAddEmb k)
-
-def kth_lift_monAlg (n k : ℕ) : A n →ₐ[ℂ] A (n + k) :=
-  MonoidAlgebra.mapDomainAlgHom ℂ ℂ (kth_lift_perm n k)
-
-
-lemma kth_lift_perm_inj (n k : ℕ) : Function.Injective ↑(kth_lift_perm n k) :=
-  Perm.viaEmbeddingHom_injective (Fin.castAddEmb k)
-
-lemma kth_lift_monAlg_inj (n k : ℕ) : Function.Injective ↑(kth_lift_monAlg n k) :=
-  Finsupp.mapDomain_injective (kth_lift_perm_inj n k)
-
-
-
-
-
-def le_lift_perm {k n : ℕ} (h_le : k ≤ n) : S k →* S n :=
-  Equiv.Perm.viaEmbeddingHom (Fin.castLEEmb h_le)
-
-def le_lift_monAlg {k n : ℕ} (h_le : k ≤ n) : A k →ₐ[ℂ] A n :=
-  MonoidAlgebra.mapDomainAlgHom ℂ ℂ (le_lift_perm h_le)
-
-
-theorem le_lift_monAlg_def {k n : ℕ} (h_le : k ≤ n) : le_lift_monAlg h_le =
-    MonoidAlgebra.mapDomainAlgHom ℂ ℂ (Perm.viaEmbeddingHom (Fin.castLEEmb h_le)) :=
-  rfl
-
--- Ois kiva laittaa tää ja lt versio @simp mutta simp muuttaa kaikki A_of jutut
--- singleiks ja rikkoo vähän niiku kaiken
-lemma le_lift_monAlg_perm_eq_le_lift_perm {n m : ℕ} {h_le : n ≤ m} {σ : S n} :
-    le_lift_monAlg h_le (A_of σ) = A_of (le_lift_perm h_le σ) := by
-  unfold le_lift_monAlg
-  simp
-
-
-def lt_lift_perm {k n : ℕ} (h_lt : k < n) : S k →* S n :=
-  le_lift_perm (le_of_lt h_lt)
-
-def lt_lift_monAlg {k n : ℕ} (h_lt : k < n) : A k →ₐ[ℂ] A n :=
-  le_lift_monAlg (le_of_lt h_lt)
-
--- Tarviiko näitä? Jos käyttäis vaa `unfold lt_lift_perm le_lift_perm`?
-theorem lt_lift_perm_def {k n : ℕ} (h_lt : k < n) :
-    lt_lift_perm h_lt = Equiv.Perm.viaEmbeddingHom (Fin.castLEEmb $ le_of_lt h_lt) :=
-  rfl
-
-theorem lt_lift_monAlg_def {k n : ℕ} (h_lt : k < n) : lt_lift_monAlg h_lt =
-    MonoidAlgebra.mapDomainAlgHom ℂ ℂ (Perm.viaEmbeddingHom (Fin.castLEEmb $ le_of_lt h_lt)) :=
-  rfl
-
-
-lemma lt_lift_monAlg_perm_eq_lt_lift_perm {n m : ℕ} {h_lt : n < m} {σ : S n} :
-    lt_lift_monAlg h_lt (A_of σ) = A_of (lt_lift_perm h_lt σ) := by
-  unfold lt_lift_monAlg lt_lift_perm
-  exact le_lift_monAlg_perm_eq_le_lift_perm
-
-
-lemma le_lift_perm_inj {n k : ℕ} (h_le : k ≤ n) : Function.Injective ↑(le_lift_perm h_le) :=
-  Perm.viaEmbeddingHom_injective (Fin.castLEEmb h_le)
-
-lemma le_lift_monAlg_inj {n k : ℕ} (h_le : k ≤ n) : Function.Injective ↑(le_lift_monAlg h_le) :=
-  MonoidAlgebra.mapDomain_injective (le_lift_perm_inj h_le)
-
-
-def lift_perm {n : ℕ} : S n →* S (n + 1) := le_lift_perm (by simp)
-
-def lift_monAlg {n : ℕ} : A n →ₐ[ℂ] A (n + 1) := le_lift_monAlg (by simp)
-
-lemma lift_perm_inj {n : ℕ} : Function.Injective ↑(@lift_perm n) :=
-  Perm.viaEmbeddingHom_injective (Fin.castSuccEmb)
-
-lemma lift_monAlg_inj {n : ℕ} : Function.Injective ↑(@lift_monAlg n) :=
-  Finsupp.mapDomain_injective (@lift_perm_inj n)
-
 -- Pitäskö olla myös `NeZero k`?? Emt
-noncomputable def jmElem (k n : ℕ) [NeZero n] : A n :=
+def jmElem (k n : ℕ) [NeZero n] : A n :=
   ∑ i : Fin n with ↑i ∈ Finset.range (k - 1), A_of (swap i ↑(k - 1))
-
-
 
 
 -- Tälläsen tarttee välillä jotta jmElem saadaa rewritattua
@@ -117,11 +32,11 @@ lemma sum_fin_eq_sum_range {M : Type} [AddCommMonoid M] {n m : ℕ} [NeZero n] (
 
 -- vois käyttää yleisempää elementtiäki ku `m - 1` mut se riittää
 lemma lt_lift_perm_swap_eq_swap_lt_lift_perm {n m : ℕ} [NeZero n] [NeZero m] (h_lt : n < m) (σ : S n) (i : Fin m) :
-    (lt_lift_perm h_lt) σ * swap i ↑(m - 1) = (swap (lt_lift_perm h_lt σ i) ↑(m - 1)) * (lt_lift_perm h_lt) σ := by
+    (lift_perm' h_lt) σ * swap i ↑(m - 1) = (swap (lift_perm' h_lt σ i) ↑(m - 1)) * (lift_perm' h_lt) σ := by
   -- Really long way of saying that `σ` fixes `m - 1`
   nth_rw 2 [←σ.viaEmbedding_apply_of_not_mem (Fin.castLEEmb $ le_of_lt h_lt) ↑(m - 1) (by simp; exact Nat.le_sub_one_of_lt h_lt)]
   -- Change the unfolded definitions back
-  change (lt_lift_perm h_lt) σ * swap i ↑(m - 1) = swap (lt_lift_perm h_lt σ i) ((lt_lift_perm h_lt σ) ↑(m - 1)) * (lt_lift_perm h_lt) σ
+  change (lift_perm' h_lt) σ * swap i ↑(m - 1) = swap (lift_perm' h_lt σ i) ((lift_perm' h_lt σ) ↑(m - 1)) * (lift_perm' h_lt) σ
 
   rw [Equiv.mul_swap_eq_swap_mul] -- Main lemma
 
@@ -129,13 +44,13 @@ lemma lt_lift_perm_swap_eq_swap_lt_lift_perm {n m : ℕ} [NeZero n] [NeZero m] (
 -- This lemma only sums over the part which σ actually permutes: `σ_sum_perm_eq` takes
 -- care of the fixed part
 lemma σ_sum_perm_eq_aux {n m k : ℕ} (hn_lt_m : n < m) [NeZero m] (σ : S n) :
-    ∑ i : Fin m with ↑i ∈ Finset.range n, A_of (swap (lt_lift_perm hn_lt_m σ i) k)
+    ∑ i : Fin m with ↑i ∈ Finset.range n, A_of (swap (lift_perm' hn_lt_m σ i) k)
       = ∑ i : Fin m with ↑i ∈ Finset.range n, A_of (swap i k) := by
 
   -- Suffices to show that σ' maps the sets we sum over to each other
   suffices h_lt_iff : ∀ i : Fin m, i ∈ {i | ↑i ∈ Finset.range n} ↔
-      lt_lift_perm hn_lt_m σ i ∈ {i : Fin m | ↑i ∈ Finset.range n}
-  · apply Finset.sum_equiv (lt_lift_perm hn_lt_m σ)
+      lift_perm' hn_lt_m σ i ∈ {i : Fin m | ↑i ∈ Finset.range n}
+  · apply Finset.sum_equiv (lift_perm' hn_lt_m σ)
     · simp at h_lt_iff ⊢ -- Basically holds by definition
       exact h_lt_iff
     · intro i hi -- Also basically by definition
@@ -147,7 +62,7 @@ lemma σ_sum_perm_eq_aux {n m k : ℕ} (hn_lt_m : n < m) [NeZero m] (σ : S n) :
   -- `Fin.castPred` for arbitrary descents like there is for arbitrary lifts: `Fin.castLEEmb`
   intro i
   constructor <;> intro h
-  · unfold lt_lift_perm le_lift_perm
+  · unfold lift_perm' lift_perm
     rw [Perm.viaEmbeddingHom_apply]
 
     -- To use `Perm.viaEmbedding_apply`, we need to take the pre-image of i under Fin.castLEEmb.
@@ -163,7 +78,7 @@ lemma σ_sum_perm_eq_aux {n m k : ℕ} (hn_lt_m : n < m) [NeZero m] (σ : S n) :
     rw [←hi_eq_lift_i_fin_n]
     rw [σ.viaEmbedding_apply]
     simp
-  · unfold lt_lift_perm le_lift_perm at h
+  · unfold lift_perm' lift_perm at h
     rw [Perm.viaEmbeddingHom_apply] at h
 
     -- This direction is a bit easier since lifted permutations fix elements not
@@ -181,7 +96,7 @@ lemma σ_sum_perm_eq_aux {n m k : ℕ} (hn_lt_m : n < m) [NeZero m] (σ : S n) :
 -- This also could be generalized to sum up to any `l` with `n ≤ l < m`
 -- but there is really no need
 lemma σ_sum_perm_eq {n m k : ℕ} (h_lt : n < m) [NeZero m] (σ : S n) :
-    ∑ i : Fin m with ↑i ∈ Finset.range (m - 1), A_of (swap (lt_lift_perm h_lt σ i) k)
+    ∑ i : Fin m with ↑i ∈ Finset.range (m - 1), A_of (swap (lift_perm' h_lt σ i) k)
       = ∑ i : Fin m with ↑i ∈ Finset.range (m - 1), A_of (swap i k) := by
   -- To use the main lemma, we need to write these in another form
   rw [sum_fin_eq_sum_range (by simp)]
@@ -201,7 +116,7 @@ lemma σ_sum_perm_eq {n m k : ℕ} (h_lt : n < m) [NeZero m] (σ : S n) :
 
   -- Rewrite the first parts back: these equal by auxiliary lemma
   rw [←Finset.range_eq_Ico] -- Change back to use ranges
-  rw [←(sum_fin_eq_sum_range (le_of_lt h_lt) (fun x => A_of (swap (((lt_lift_perm h_lt) σ) ↑x) ↑k)))]
+  rw [←(sum_fin_eq_sum_range (le_of_lt h_lt) (fun x => A_of (swap (((lift_perm' h_lt) σ) ↑x) ↑k)))]
   rw [←(sum_fin_eq_sum_range (le_of_lt h_lt) (fun x => A_of (swap ↑x ↑k)))]
 
   rw [σ_sum_perm_eq_aux] -- Use the auxiliary lemma
@@ -210,7 +125,7 @@ lemma σ_sum_perm_eq {n m k : ℕ} (h_lt : n < m) [NeZero m] (σ : S n) :
 
 
   -- Now using the fact that the lifted permutation fixes everything not in range, we are done
-  unfold lt_lift_perm le_lift_perm
+  unfold lift_perm' lift_perm
   rw [σ.viaEmbeddingHom_apply]
 
   have hi_not_in_range : ∀ i ∈ Finset.Ico n (m - 1), ↑i ∉ Set.range ↑(Fin.castLEEmb $ le_of_lt h_lt) := by
@@ -229,7 +144,7 @@ lemma σ_sum_perm_eq {n m k : ℕ} (h_lt : n < m) [NeZero m] (σ : S n) :
 
 
 theorem jmElem_succ_comm_perm {n m : ℕ} [NeZero n] [NeZero m] (σ : S n) (h_lt : n < m) :
-    Commute (jmElem m m) (lt_lift_monAlg h_lt (A_of σ)) := by
+    Commute (jmElem m m) (lift_MonoidAlgebra' h_lt (A_of σ)) := by
   rw [jmElem, commute_iff_eq]
 
   -- Distributivity
@@ -238,9 +153,9 @@ theorem jmElem_succ_comm_perm {n m : ℕ} [NeZero n] [NeZero m] (σ : S n) (h_lt
   conv =>
     enter [2, 2, i]
     rw [lt_lift_monAlg_perm_eq_lt_lift_perm]
-    rw [←MonoidHom.map_mul A_of (lt_lift_perm h_lt σ) (swap i ↑(m - 1))]
+    rw [←MonoidHom.map_mul A_of (lift_perm' h_lt σ) (swap i ↑(m - 1))]
     rw [lt_lift_perm_swap_eq_swap_lt_lift_perm]
-    rw [MonoidHom.map_mul A_of (swap (lt_lift_perm h_lt σ i) ↑(m - 1))]
+    rw [MonoidHom.map_mul A_of (swap (lift_perm' h_lt σ i) ↑(m - 1))]
 
   conv =>
     rhs
@@ -250,13 +165,6 @@ theorem jmElem_succ_comm_perm {n m : ℕ} [NeZero n] [NeZero m] (σ : S n) (h_lt
   rw [σ_sum_perm_eq]
   -- lift_perm same as lift_monAlg
   rw [lt_lift_monAlg_perm_eq_lt_lift_perm]
-
-
-@[simp]
-lemma lift_monAlg_of_eq_of_lift_perm {n m : ℕ} (h_lt : n < m) (σ : S n) :
-    lt_lift_monAlg h_lt (A_of σ) = A_of (lt_lift_perm h_lt σ) := by
-  rw [lt_lift_monAlg_def, lt_lift_perm_def]
-  simp
 
 
 lemma castLEEmb_eq {n m k : ℕ} [NeZero n] [NeZero m] (n_le_m : n ≤ m) (k_lt_n : k < n) :
@@ -270,8 +178,8 @@ lemma castLEEmb_eq {n m k : ℕ} [NeZero n] [NeZero m] (n_le_m : n ≤ m) (k_lt_
 
 
 lemma le_lift_perm_swap {n m i j : ℕ} [NeZero n] [NeZero m] (n_le_m : n ≤ m) (i_lt_n : i < n) (j_lt_n : j < n) :
-    (le_lift_perm n_le_m) (swap ↑i ↑j) = swap ↑i ↑j := by
-  unfold le_lift_perm
+    (lift_perm n_le_m) (swap ↑i ↑j) = swap ↑i ↑j := by
+  unfold lift_perm
   rw [Perm.viaEmbeddingHom_apply]
 
   ext x
@@ -315,15 +223,10 @@ lemma le_lift_perm_swap {n m i j : ℕ} [NeZero n] [NeZero m] (n_le_m : n ≤ m)
       exact Nat.ne_of_lt' j_lt_x
 
 
-example (n m : ℕ) [NeZero n] (h : n ≤ m) : n - 1 < m := by
-  refine lt_of_lt_of_le ?_ h
-  simp
-  exact Nat.pos_of_neZero n
-
 
 -- Vois tehå vielä paljonki simppelimmäks: tää oli vaa miten sai nopee tehtyy
 lemma le_lift_monAlg_jmElem_eq {n m k : ℕ} [NeZero n] [NeZero m] [NeZero k] (n_le_m : n ≤ m) (k_le_n : k ≤ n) :
-    le_lift_monAlg n_le_m (jmElem k n) = jmElem k m := by
+    lift_MonoidAlgebra n_le_m (jmElem k n) = jmElem k m := by
   unfold jmElem
   rw [map_sum] -- Linearity
   rw [sum_fin_eq_sum_range (Nat.le_trans (Nat.le_trans (by simp) k_le_n) n_le_m)] -- This is again needed since we want to sum over a Fintype very often
@@ -343,19 +246,19 @@ lemma le_lift_monAlg_jmElem_eq {n m k : ℕ} [NeZero n] [NeZero m] [NeZero k] (n
 
 
 lemma lt_lift_monAlg_jmElem_eq {n m k : ℕ} [NeZero n] [NeZero m] [NeZero k] (n_lt_m : n < m) (k_le_n : k ≤ n) :
-    lt_lift_monAlg n_lt_m (jmElem k n) = jmElem k m :=
+    lift_MonoidAlgebra' n_lt_m (jmElem k n) = jmElem k m :=
   le_lift_monAlg_jmElem_eq (le_of_lt n_lt_m) k_le_n
 
 
 theorem jmElem_succ_comm_monAlg {n m : ℕ} [NeZero m] [NeZero n] (a : A n) (h_lt : n < m) :
-    Commute (jmElem m m) (lt_lift_monAlg h_lt a) := by
+    Commute (jmElem m m) (lift_MonoidAlgebra' h_lt a) := by
   -- Decompose into sum of singles
   rw [← a.sum_single]
 
   unfold Finsupp.sum
 
   -- Move lift_monAlg inside sum
-  rw [map_sum $ lt_lift_monAlg h_lt]
+  rw [map_sum $ lift_MonoidAlgebra' h_lt]
 
   -- Move a x out of lift_monAlg
   conv in fun x ↦ _ =>
@@ -382,7 +285,7 @@ lemma lift_jmElem_comm {n m k l : ℕ} [NeZero n] [NeZero m] [NeZero k] [NeZero 
     Commute (jmElem k m) (jmElem l m) := by
   repeat rw [← le_lift_monAlg_jmElem_eq hn_le_m]
   rw [commute_iff_eq] at *
-  repeat rw [← map_mul $ le_lift_monAlg hn_le_m]
+  repeat rw [← map_mul $ lift_MonoidAlgebra hn_le_m]
   rw [h_comm]
   all_goals assumption
 
@@ -399,7 +302,7 @@ lemma jmElem_comm' {n k l : ℕ} [NeZero n] [NeZero k] [NeZero l] (hl_le_n : l �
 
   have h_lt : l - 1 < l := Nat.sub_one_lt_of_lt hk_lt_l
 
-  suffices h : Commute (lt_lift_monAlg h_lt $ jmElem k (l - 1)) (jmElem l l) by
+  suffices h : Commute (lift_MonoidAlgebra' h_lt $ jmElem k (l - 1)) (jmElem l l) by
     rw [lt_lift_monAlg_jmElem_eq h_lt] at h
     · exact lift_jmElem_comm hl_le_n (by linarith) (by linarith) h
     · exact Nat.le_pred_of_lt hk_lt_l
