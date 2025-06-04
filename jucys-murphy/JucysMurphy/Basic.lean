@@ -11,8 +11,6 @@ noncomputable abbrev A_of {n : ℕ} := MonoidAlgebra.of ℂ (S n)
 
 
 
--- Before `Utils` compiles:
-
 noncomputable section
 
 
@@ -72,44 +70,6 @@ lemma lt_lift_monAlg_perm_eq_lt_lift_perm {n m : ℕ} {h_lt : n < m} {σ : S n} 
     lt_lift_monAlg h_lt (A_of σ) = A_of (lt_lift_perm h_lt σ) := by
   unfold lt_lift_monAlg lt_lift_perm
   exact le_lift_monAlg_perm_eq_le_lift_perm
-
-
-
-
-
-#check AlgHom.comp_apply
-
--- TODO: Tarviikohan tätä? Varmaan joo
-theorem viaEmbeddingHom_trans {α β γ : Type*} (ι : α ↪ β) (κ : β ↪ γ) :
-    (Perm.viaEmbeddingHom κ).comp (Perm.viaEmbeddingHom ι) = Perm.viaEmbeddingHom (ι.trans κ) := by
-
-  apply MonoidHom.ext
-  intro σ
-  rw [MonoidHom.comp_apply]
-  rw [Perm.viaEmbeddingHom_apply]
-  rw [Perm.viaEmbeddingHom_apply]
-  rw [Perm.viaEmbeddingHom_apply]
-
-  unfold Perm.viaEmbedding
-  --simp
-  rw [Perm.extendDomain_trans]
-  -- Saako jotenkin σ otettua takasin että RHS ois .trans?
-
-  sorry
-
--- TODO:
-theorem le_lift_monAlg_trans {k l n : ℕ} (hkl : k ≤ l) (hln : l ≤ n) {a : A k} :
-    le_lift_monAlg hln (le_lift_monAlg hkl a) = le_lift_monAlg (le_trans hkl hln) a := by
-  rw [le_lift_monAlg_def, le_lift_monAlg_def]
-  have : (MonoidAlgebra.mapDomainAlgHom ℂ ℂ (Perm.viaEmbeddingHom (Fin.castLEEmb hln)))
-      ((MonoidAlgebra.mapDomainAlgHom ℂ ℂ (Perm.viaEmbeddingHom (Fin.castLEEmb hkl))) a) =
-        MonoidAlgebra.mapDomainAlgHom ℂ ℂ (Perm.viaEmbeddingHom (Fin.castLEEmb $ le_trans hkl hln)) a := by
-    rw [← AlgHom.comp_apply]
-    rw [← MonoidAlgebra.mapDomainAlgHom_comp ℂ ℂ]
-    rw [viaEmbeddingHom_trans (Fin.castLEEmb hkl) (Fin.castLEEmb hln)]
-    simp
-    sorry
-  exact this
 
 
 lemma le_lift_perm_inj {n k : ℕ} (h_le : k ≤ n) : Function.Injective ↑(le_lift_perm h_le) :=
@@ -292,93 +252,68 @@ theorem jmElem_succ_comm_perm {n m : ℕ} [NeZero n] [NeZero m] (σ : S n) (h_lt
   rw [lt_lift_monAlg_perm_eq_lt_lift_perm]
 
 
--- TÄÄ MYÖS UTILS
 @[simp]
 lemma lift_monAlg_of_eq_of_lift_perm {n m : ℕ} (h_lt : n < m) (σ : S n) :
     lt_lift_monAlg h_lt (A_of σ) = A_of (lt_lift_perm h_lt σ) := by
   rw [lt_lift_monAlg_def, lt_lift_perm_def]
   simp
 
-#check MonoidHom.inl_apply
-#check MonoidHom.map_finprod
-#check MonoidAlgebra.mapDomainAlgHom
-#check MonoidAlgebra.mapDomainAlgHom_apply
-#check Perm.viaEmbedding_apply
-#check MonoidAlgebra.single_apply
-#check MonoidHom.eval
-#check Finset.sum_equiv
-#check Finset.sum_bij
-#check Finset.sum_nbij'
-#check Finset.sum_comp
-#check AddCommMonoid.mk
-#check Finset.card_le_card_of_surjOn
 
--- Finset.sum_comp {α : Type u_3} {β : Type u_4} {γ : Type u_5} {s : Finset α}
---  (f : γ → β) (g : α → γ) : ∑ a ∈ s, f (g a) = ∑ b ∈ Finset.image g s, {a ∈ s | g a = b}.card • f b
+lemma castLEEmb_eq {n m k : ℕ} [NeZero n] [NeZero m] (n_le_m : n ≤ m) (k_lt_n : k < n) :
+    Fin.castLEEmb n_le_m ↑k = ↑k := by
+  simp
+  apply Fin.eq_of_val_eq
+  rw [Fin.coe_castLE n_le_m ↑k]
+  simp
+  rw [Nat.mod_eq_of_lt k_lt_n]
+  rw [Nat.mod_eq_of_lt (by linarith)]
 
-#check Perm.viaFintypeEmbedding
-#check Fin.castLE
 
--- lemma le_lift_perm_swap' {n m i j : ℕ} [NeZero n] [NeZero m] (n_le_m : n ≤ m) (i_lt_n : i < n) (j_le_n : j ≤ n) :
---     (le_lift_perm n_le_m) (swap ↑i ↑j) = swap ↑i ↑j := by
---   unfold le_lift_perm
---   rw [Perm.viaEmbeddingHom_apply]
-
---   --by_cases
---   -- Tällä tarttis enää et liftaus sama ku kompositio sillä embedding
---   #check Function.Embedding.swap_comp
-
---   let f := Fin.castLEEmb n_le_m
-
---   suffices h : ⇑(swap (f ↑i) (f ↑j)) ∘ ⇑f = ⇑f ∘ ⇑(swap ↑i ↑j) by
---     unfold f at h
---     simp at h
---     unfold Fin.castLE at h
---     simp at h
-
---     rw [Nat.mod_eq_of_lt i_lt_n]
---     sorry
-
---   exact f.swap_comp ↑i ↑j
-
-lemma le_lift_perm_swap' {n m i j : ℕ} [NeZero n] [NeZero m] (n_le_m : n ≤ m) (i_lt_n : i < n) (j_lt_n : j < n) :
+lemma le_lift_perm_swap {n m i j : ℕ} [NeZero n] [NeZero m] (n_le_m : n ≤ m) (i_lt_n : i < n) (j_lt_n : j < n) :
     (le_lift_perm n_le_m) (swap ↑i ↑j) = swap ↑i ↑j := by
   unfold le_lift_perm
   rw [Perm.viaEmbeddingHom_apply]
 
-  have h_castLE_eq_coe (k : ℕ) (k_le_n : k ≤ n) : Fin.castLEEmb n_le_m ↑k = ↑k := by
-    sorry
-
-  rw [← h_castLE_eq_coe i (by linarith)]
-  rw [← h_castLE_eq_coe j j_lt_n]
-
-  -- Tällä tarttis enää et liftaus sama ku kompositio sillä embedding
-  #check Function.Embedding.swap_comp
-
-  let f := Fin.castLEEmb n_le_m
-
-  suffices h : ⇑(swap (f ↑i) (f ↑j)) ∘ ⇑f = ⇑f ∘ ⇑(swap ↑i ↑j) by
-    unfold f at h
-    simp at h
-    unfold Fin.castLE at h
-    simp at h
-
-    rw [Nat.mod_eq_of_lt i_lt_n]
-    sorry
-
-  exact f.swap_comp ↑i ↑j
-
-
-
-lemma le_lift_perm_swap {n m k : ℕ} (x : Fin n) [NeZero n] [NeZero m] (h_le : n ≤ m) :
-    (le_lift_perm h_le) (swap x ↑k) = swap (x : Fin m) ↑k := by
-  unfold le_lift_perm
   ext x
-  rw [Perm.viaEmbeddingHom_apply]
-  unfold Fin.castLEEmb Fin.castLE
 
-  rw [Perm.viaEmbedding]
-  sorry
+  by_cases h : ↑x < n
+  · -- Perm.viaEmbedding_apply
+    let x_subtype : ↑(Set.range (Fin.castLEEmb n_le_m)) := ⟨x, by simp; exact h⟩
+    let x_fin_n : Fin n := (Fin.castLEEmb n_le_m).invOfMemRange x_subtype
+    have x_eq_lift_i_fin_n : (Fin.castLEEmb n_le_m) x_fin_n = x := by
+      unfold x_fin_n
+      simp
+      rfl
+    rw [← x_eq_lift_i_fin_n]
+    rw [Perm.viaEmbedding_apply]
+    rw [← castLEEmb_eq n_le_m i_lt_n]
+    rw [← castLEEmb_eq n_le_m j_lt_n]
+
+    let f := Fin.castLEEmb n_le_m
+    rw [← @Function.comp_apply _ _ _ f (swap ↑i ↑j)]
+    rw [← @Function.comp_apply _ _ _ (swap (f ↑i) (f ↑j)) f]
+
+    rw [Function.Embedding.swap_comp]
+  · -- Perm.viaEmbedding_apply_of_not_mem
+    have x_not_in_range : x ∉ Set.range ↑(Fin.castLEEmb n_le_m) := by
+      simp
+      exact Nat.le_of_not_lt h
+
+    simp at h
+
+    rw [(swap ↑i ↑j).viaEmbedding_apply_of_not_mem (Fin.castLEEmb n_le_m) x x_not_in_range]
+    rw [swap_apply_of_ne_of_ne]
+    · rw [← Fin.val_ne_iff]
+      simp
+      rw [Nat.mod_eq_of_lt (by linarith)]
+      have i_lt_x : i < x := Nat.lt_of_lt_of_le i_lt_n h
+      exact Nat.ne_of_lt' i_lt_x
+    · rw [← Fin.val_ne_iff]
+      simp
+      rw [Nat.mod_eq_of_lt (by linarith)]
+      have j_lt_x : j < x := Nat.lt_of_lt_of_le j_lt_n h
+      exact Nat.ne_of_lt' j_lt_x
+
 
 example (n m : ℕ) [NeZero n] (h : n ≤ m) : n - 1 < m := by
   refine lt_of_lt_of_le ?_ h
@@ -399,7 +334,7 @@ lemma le_lift_monAlg_jmElem_eq {n m k : ℕ} [NeZero n] [NeZero m] [NeZero k] (n
     rw [le_lift_monAlg_perm_eq_le_lift_perm]
     congr
     simp at hi
-    apply le_lift_perm_swap'
+    apply le_lift_perm_swap
     · -- Can't get linarith to do this nicely so a bit verbose
       exact Nat.lt_of_lt_of_le (Nat.lt_of_lt_pred hi) k_le_n
     · refine lt_of_lt_of_le ?_ k_le_n
